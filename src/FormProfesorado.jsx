@@ -7,7 +7,7 @@ import "./index.css";
 // dentro del doPost() — ver README para el snippet.
 // =============================================
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwgCM-LjBMtEc_LwK7Gs7D6yfZ97niXebD3fGeSFmd18vTWQR7UY61ui-rMuB-nH_En/exec";
+  "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
 // Estado inicial — campos exactos del modelo de datos existente
 const INITIAL_FORM = {
