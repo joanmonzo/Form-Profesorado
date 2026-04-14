@@ -26,27 +26,25 @@ const INITIAL_FORM = {
 // =============================================
 // VALIDACIÓN POR PASO
 // =============================================
-const validateStep = (step, form) => {
+const validateStep = (step, form, localidadOtra) => {
   const errors = {};
 
   if (step === 0) {
     if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
     if (!form.sexo) errors.sexo = "Selecciona el sexo.";
-    if (!form.localidad.trim() || form.localidad === "__otra__")
+
+    // ✅ Validación corregida para la localidad manual
+    if (!form.localidad || (form.localidad === "__otra__" && !localidadOtra.trim())) {
       errors.localidad = "La localidad es obligatoria.";
+    }
   }
 
   if (step === 1) {
-    if (!form.titulacion.trim())
-      errors.titulacion = "La titulación es obligatoria.";
-    if (form.cursos.length === 0)
-      errors.cursos = "Selecciona al menos un curso.";
-    if (!form.certificado_docencia)
-      errors.certificado_docencia = "Campo obligatorio.";
-    if (!form.certificado_teleformacion)
-      errors.certificado_teleformacion = "Campo obligatorio.";
-    if (!form.trabajado_con_orbel)
-      errors.trabajado_con_orbel = "Campo obligatorio.";
+    if (!form.titulacion.trim()) errors.titulacion = "La titulación es obligatoria.";
+    if (form.cursos.length === 0) errors.cursos = "Selecciona al menos un curso.";
+    if (!form.certificado_docencia) errors.certificado_docencia = "Campo obligatorio.";
+    if (!form.certificado_teleformacion) errors.certificado_teleformacion = "Campo obligatorio.";
+    if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
   }
 
   return errors;
@@ -116,16 +114,10 @@ const ThemeToggle = ({ theme, setTheme }) => (
 
 const Header = () => (
   <div style={{ marginBottom: 40, textAlign: "center" }}>
-    <h1
-      className="title-font"
-      style={{ fontSize: 34, fontWeight: 700, marginBottom: 4, letterSpacing: "-0.5px" }}
-    >
+    <h1 className="title-font" style={{ fontSize: 34, fontWeight: 700, marginBottom: 4, letterSpacing: "-0.5px" }}>
       Academia Industrial by Orbel
     </h1>
-    <p
-      className="title-font"
-      style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: "4px", fontWeight: 600, textTransform: "uppercase", opacity: 0.8 }}
-    >
+    <p className="title-font" style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: "4px", fontWeight: 600, textTransform: "uppercase", opacity: 0.8 }}>
       Alta de profesorado
     </p>
   </div>
@@ -133,10 +125,7 @@ const Header = () => (
 
 const Footer = ({ theme }) => (
   <footer className="footer">
-    <img
-      src={theme === "light" ? "/logo-academia.jpeg" : "/logo-academia-dark.png"}
-      alt="Academia Industrial by Orbel"
-    />
+    <img src={theme === "light" ? "/logo-academia.jpeg" : "/logo-academia-dark.png"} alt="Academia Industrial by Orbel" />
   </footer>
 );
 
@@ -149,10 +138,9 @@ export default function FormProfesorado() {
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitResult, setSubmitResult] = useState(null); // "success" | "error"
+  const [submitResult, setSubmitResult] = useState(null);
   const [theme, setTheme] = useState("light");
 
-  // Opciones dinámicas desde la API
   const [cursosDisponibles, setCursosDisponibles] = useState([]);
   const [localidades, setLocalidades] = useState([]);
   const [loadingOpts, setLoadingOpts] = useState(true);
@@ -160,7 +148,6 @@ export default function FormProfesorado() {
   const STEPS = ["Datos personales", "Perfil profesional", "Revisión"];
   const TOTAL_STEPS = STEPS.length;
 
-  // ——— Carga de opciones (misma llamada que appProfesorado) ———
   useEffect(() => {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
@@ -175,19 +162,17 @@ export default function FormProfesorado() {
           )].sort()
         );
         setLocalidades(
-          [...new Set(data.map(p => p.localidad).filter(Boolean))].sort()
+          [...new Set(data.map(p => p.localidad || p.PROVINCIA).filter(Boolean))].sort()
         );
       })
-      .catch(() => { /* fallo silencioso: el usuario puede escribir manualmente */ })
+      .catch(() => { })
       .finally(() => setLoadingOpts(false));
   }, []);
 
-  // ——— Sincronizar tema con el DOM ———
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // ——— Handlers genéricos ———
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -209,9 +194,9 @@ export default function FormProfesorado() {
     if (errors.cursos) setErrors(prev => ({ ...prev, cursos: undefined }));
   };
 
-  // ——— Navegación entre pasos ———
   const handleNext = () => {
-    const stepErrors = validateStep(currentStep, form);
+    // ✅ Pasamos localidadOtra al validador
+    const stepErrors = validateStep(currentStep, form, localidadOtra);
     if (Object.keys(stepErrors).length > 0) { setErrors(stepErrors); return; }
     setErrors({});
     setCurrentStep(prev => prev + 1);
@@ -224,30 +209,26 @@ export default function FormProfesorado() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ——— Envío: misma API, nueva acción "insertar" ———
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const currentYear = new Date().getFullYear().toString();
 
       const payload = {
-        action: "crear",
+        action: "crear", // Mantenido según tu lógica actual
         "AÑO": currentYear,
         "NOMBRE": form.nombre,
         "SEXO": form.sexo === "NS" ? "" : form.sexo,
-        "PROVINCIA": form.localidad,
+        // ✅ Resolución correcta de provincia
+        "PROVINCIA": form.localidad === "__otra__" ? localidadOtra.trim() : form.localidad,
         "TITULACIÓN": form.titulacion,
         "PRECIO": form.precio,
         "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia,
         "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion,
-
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
         "Entrevista curso AÑO": "NO",
-
         "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
-
         "OBERV.": form.observaciones,
-
         "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
       };
 
@@ -277,12 +258,8 @@ export default function FormProfesorado() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ——— Etiqueta legible para sexo en revisión ———
   const sexoLabel = { M: "Masculino", F: "Femenino", NS: "No indica" }[form.sexo] ?? null;
 
-  // =============================================
-  // PANTALLA DE ÉXITO
-  // =============================================
   if (submitResult === "success") {
     return (
       <div className="app-container">
@@ -290,38 +267,25 @@ export default function FormProfesorado() {
         <Header />
         <div className="success-card">
           <div className="success-icon">🎉</div>
-          <h2 className="title-font" style={{ fontSize: 26, fontWeight: 700, marginBottom: 10 }}>
-            ¡Perfil registrado!
-          </h2>
+          <h2 className="title-font" style={{ fontSize: 26, fontWeight: 700, marginBottom: 10 }}>¡Perfil registrado!</h2>
           <p style={{ fontSize: 14, color: "var(--text-secondary)", maxWidth: 320, margin: "0 auto 28px", lineHeight: 1.6 }}>
-            Los datos de <strong>{form.nombre}</strong> se han enviado correctamente
-            y serán añadidos al directorio de profesorado.
+            Los datos de <strong>{form.nombre}</strong> se han enviado correctamente y serán añadidos al directorio de profesorado.
           </p>
-          <button className="btn-primary" onClick={handleReset}>
-            ➕ Añadir otro profesor
-          </button>
+          <button className="btn-primary" onClick={handleReset}>➕ Añadir otro profesor</button>
         </div>
         <Footer theme={theme} />
       </div>
     );
   }
 
-  // =============================================
-  // PANTALLA DE ERROR DE ENVÍO
-  // =============================================
   if (submitResult === "error") {
     return (
       <div className="app-container">
         <ThemeToggle theme={theme} setTheme={setTheme} />
         <Header />
-        <div style={{
-          background: "var(--danger-bg)", border: "1px solid var(--danger-border)",
-          borderRadius: 16, padding: "40px 32px", textAlign: "center",
-        }}>
+        <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 16, padding: "40px 32px", textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 14 }}>⚠️</div>
-          <h2 className="title-font" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "var(--danger-text)" }}>
-            Error al enviar
-          </h2>
+          <h2 className="title-font" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "var(--danger-text)" }}>Error al enviar</h2>
           <p style={{ fontSize: 13, color: "var(--danger-text)", marginBottom: 24, lineHeight: 1.6 }}>
             No se ha podido guardar el perfil. Comprueba tu conexión o que el servidor esté activo.
           </p>
@@ -337,34 +301,22 @@ export default function FormProfesorado() {
     );
   }
 
-  // =============================================
-  // FORMULARIO MULTI-PASO
-  // =============================================
   return (
     <div className="app-container">
       <ThemeToggle theme={theme} setTheme={setTheme} />
       <Header />
       <StepIndicator currentStep={currentStep} totalSteps={TOTAL_STEPS} stepLabels={STEPS} />
 
-      {/* ——— PASO 0: Datos personales ——— */}
       {currentStep === 0 && (
         <div className="panel">
           <div className="panel-title">👤 Datos personales</div>
           <div className="grid-2">
-
-            {/* Nombre */}
             <div className="grid-field full-width">
               <label className="label required">Nombre completo</label>
-              <input
-                type="text" name="nombre" value={form.nombre}
-                onChange={handleChange} autoComplete="off"
-                className={`input ${errors.nombre ? "error" : ""}`}
-                placeholder="Ej. María García López"
-              />
+              <input type="text" name="nombre" value={form.nombre} onChange={handleChange} autoComplete="off" className={`input ${errors.nombre ? "error" : ""}`} placeholder="Ej. María García López" />
               {errors.nombre && <span className="field-error">{errors.nombre}</span>}
             </div>
 
-            {/* Sexo */}
             <div className="grid-field full-width">
               <label className="label required">Sexo</label>
               <div className="radio-group">
@@ -375,55 +327,38 @@ export default function FormProfesorado() {
               {errors.sexo && <span className="field-error">{errors.sexo}</span>}
             </div>
 
-            {/* Localidad — select dinámico o input libre si la API falla */}
+            {/* ✅ Lógica de Localidad corregida */}
             <div className="grid-field full-width">
               <label className="label required">Localidad</label>
-              {!loadingOpts && localidades.length > 0 ? (
-                <>
-                  <select
-                    name="localidad" value={form.localidad === localidadOtra && localidadOtra ? "__otra__" : form.localidad}
-                    onChange={e => {
-                      if (e.target.value === "__otra__") {
-                        setForm(prev => ({ ...prev, localidad: "" }));
-                      } else {
-                        setForm(prev => ({ ...prev, localidad: e.target.value }));
-                        setLocalidadOtra("");
-                      }
-                      if (errors.localidad) setErrors(prev => ({ ...prev, localidad: undefined }));
-                    }}
-                    className={`input ${errors.localidad ? "error" : ""}`}
-                  >
-                    <option value="">Selecciona una localidad…</option>
-                    {localidades.map(l => <option key={l} value={l}>{l}</option>)}
-                    <option value="__otra__">Otra (escribir manualmente)</option>
-                  </select>
-                  {/* Input libre si selecciona "Otra" */}
-                  {(form.localidad === "" && !localidades.includes(form.localidad)) && (
-                    <input
-                      type="text" value={localidadOtra} autoFocus autoComplete="off"
-                      onChange={e => {
-                        setLocalidadOtra(e.target.value);
-                        setForm(prev => ({ ...prev, localidad: e.target.value }));
-                        if (errors.localidad) setErrors(prev => ({ ...prev, localidad: undefined }));
-                      }}
-                      className={`input ${errors.localidad ? "error" : ""}`}
-                      style={{ marginTop: 8 }}
-                      placeholder="Escribe la localidad…"
-                    />
-                  )}
-                </>
-              ) : (
+              <select
+                name="localidad"
+                value={form.localidad}
+                onChange={handleChange}
+                className={`input ${errors.localidad ? "error" : ""}`}
+                disabled={loadingOpts}
+              >
+                <option value="">{loadingOpts ? "Cargando..." : "Selecciona una localidad…"}</option>
+                {localidades.map(l => <option key={l} value={l}>{l}</option>)}
+                <option value="__otra__">Otra (escribir manualmente)</option>
+              </select>
+
+              {form.localidad === "__otra__" && (
                 <input
-                  type="text" name="localidad" value={form.localidad}
-                  onChange={handleChange} autoComplete="off"
+                  type="text"
+                  value={localidadOtra}
+                  autoFocus
+                  autoComplete="off"
+                  onChange={e => {
+                    setLocalidadOtra(e.target.value);
+                    if (errors.localidad) setErrors(prev => ({ ...prev, localidad: undefined }));
+                  }}
                   className={`input ${errors.localidad ? "error" : ""}`}
-                  placeholder={loadingOpts ? "Cargando…" : "Ej. Madrid, Barcelona…"}
-                  disabled={loadingOpts}
+                  style={{ marginTop: 8 }}
+                  placeholder="Escribe la localidad…"
                 />
               )}
               {errors.localidad && <span className="field-error">{errors.localidad}</span>}
             </div>
-
           </div>
           <div className="form-nav">
             <button className="btn-primary" onClick={handleNext}>Siguiente →</button>
@@ -431,71 +366,38 @@ export default function FormProfesorado() {
         </div>
       )}
 
-      {/* ——— PASO 1: Perfil profesional ——— */}
       {currentStep === 1 && (
         <div className="panel">
           <div className="panel-title">🎓 Perfil profesional</div>
           <div className="grid-2">
-
-            {/* Titulación */}
             <div className="grid-field full-width">
               <label className="label required">Titulación</label>
-              <input
-                type="text" name="titulacion" value={form.titulacion}
-                onChange={handleChange} autoComplete="off"
-                className={`input ${errors.titulacion ? "error" : ""}`}
-                placeholder="Ej. Grado en Ingeniería Industrial, FP Electricidad…"
-              />
+              <input type="text" name="titulacion" value={form.titulacion} onChange={handleChange} autoComplete="off" className={`input ${errors.titulacion ? "error" : ""}`} placeholder="Ej. Grado en Ingeniería Industrial, FP Electricidad…" />
               {errors.titulacion && <span className="field-error">{errors.titulacion}</span>}
             </div>
 
-            {/* Precio */}
             <div className="grid-field full-width">
               <label className="label">Precio (€/hora)</label>
-              <input
-                type="text" name="precio" value={form.precio}
-                onChange={handleChange} autoComplete="off"
-                className="input"
-                placeholder="Ej. 25  o  20-30 (rango)"
-              />
+              <input type="text" name="precio" value={form.precio} onChange={handleChange} autoComplete="off" className="input" placeholder="Ej. 25  o  20-30 (rango)" />
               <span className="hint">Valor fijo o rango separado por guión, ej. <em>20-30</em>.</span>
             </div>
 
-            {/* Cursos — pills cargados desde la API */}
             <div className="grid-field full-width">
               <label className="label required">Cursos que imparte</label>
               {loadingOpts ? (
-                <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "8px 0" }}>
-                  Cargando cursos disponibles…
-                </p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "8px 0" }}>Cargando cursos disponibles…</p>
               ) : cursosDisponibles.length > 0 ? (
                 <div className="checkbox-group">
                   {cursosDisponibles.map(curso => (
-                    <CheckboxPill
-                      key={curso} label={curso}
-                      checked={form.cursos.includes(curso)}
-                      onChange={() => handleCursoToggle(curso)}
-                    />
+                    <CheckboxPill key={curso} label={curso} checked={form.cursos.includes(curso)} onChange={() => handleCursoToggle(curso)} />
                   ))}
                 </div>
               ) : (
-                /* Fallback: input libre si la API no devuelve cursos */
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Ej. Soldadura, Electricidad, PRL…"
-                  onChange={e =>
-                    setForm(prev => ({
-                      ...prev,
-                      cursos: e.target.value.split(",").map(c => c.trim()).filter(Boolean),
-                    }))
-                  }
-                />
+                <input type="text" className="input" placeholder="Ej. Soldadura, Electricidad, PRL…" onChange={e => setForm(prev => ({ ...prev, cursos: e.target.value.split(",").map(c => c.trim()).filter(Boolean) }))} />
               )}
               {errors.cursos && <span className="field-error">{errors.cursos}</span>}
             </div>
 
-            {/* Certificado Docencia */}
             <div className="grid-field">
               <label className="label required">Certificado Docencia (SSCE0110)</label>
               <div className="radio-group">
@@ -506,7 +408,6 @@ export default function FormProfesorado() {
               {errors.certificado_docencia && <span className="field-error">{errors.certificado_docencia}</span>}
             </div>
 
-            {/* Certificado Teleformación */}
             <div className="grid-field">
               <label className="label required">Certificado E-Learning / Teleformación</label>
               <div className="radio-group">
@@ -517,7 +418,6 @@ export default function FormProfesorado() {
               {errors.certificado_teleformacion && <span className="field-error">{errors.certificado_teleformacion}</span>}
             </div>
 
-            {/* Trabajó en Orbel */}
             <div className="grid-field full-width">
               <label className="label required">¿Ha trabajado anteriormente con Orbel?</label>
               <div className="radio-group">
@@ -527,16 +427,10 @@ export default function FormProfesorado() {
               {errors.trabajado_con_orbel && <span className="field-error">{errors.trabajado_con_orbel}</span>}
             </div>
 
-            {/* Observaciones */}
             <div className="grid-field full-width">
               <label className="label">Observaciones</label>
-              <textarea
-                name="observaciones" value={form.observaciones}
-                onChange={handleChange} rows={4} className="input"
-                placeholder="Disponibilidad, especialidades concretas, notas de contacto…"
-              />
+              <textarea name="observaciones" value={form.observaciones} onChange={handleChange} rows={4} className="input" placeholder="Disponibilidad, especialidades concretas, notas de contacto…" />
             </div>
-
           </div>
           <div className="form-nav">
             <button className="btn-secondary" onClick={handleBack}>← Atrás</button>
@@ -545,14 +439,14 @@ export default function FormProfesorado() {
         </div>
       )}
 
-      {/* ——— PASO 2: Revisión y confirmación ——— */}
       {currentStep === 2 && (
         <div>
           <div className="panel">
             <div className="panel-title">📋 Datos personales</div>
             <ReviewRow label="Nombre" value={form.nombre} />
             <ReviewRow label="Sexo" value={sexoLabel} />
-            <ReviewRow label="Localidad" value={form.localidad} />
+            {/* ✅ Revisión correcta de localidad */}
+            <ReviewRow label="Localidad" value={form.localidad === "__otra__" ? localidadOtra : form.localidad} />
           </div>
 
           <div className="panel">
@@ -566,11 +460,7 @@ export default function FormProfesorado() {
             <ReviewRow label="Observaciones" value={form.observaciones} />
           </div>
 
-          <div style={{
-            background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
-            borderRadius: 10, padding: "14px 18px", fontSize: 12, color: "var(--text-muted)",
-            marginBottom: 8, lineHeight: 1.5,
-          }}>
+          <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 10, padding: "14px 18px", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, lineHeight: 1.5 }}>
             ℹ️ Revisa que los datos son correctos. Al confirmar, el perfil se añadirá directamente al directorio de profesorado de Academia Industrial.
           </div>
 
