@@ -11,16 +11,16 @@ const API_URL =
 
 // Estado inicial — campos exactos del modelo de datos existente
 const INITIAL_FORM = {
-  nombre:                    "",
-  sexo:                      "",
-  localidad:                 "",
-  titulacion:                "",
-  cursos:                    [],  // array → CSV al enviar
-  precio:                    "",
-  certificado_docencia:      "",
+  nombre: "",
+  sexo: "",
+  localidad: "",
+  titulacion: "",
+  cursos: [],  // array → CSV al enviar
+  precio: "",
+  certificado_docencia: "",
   certificado_teleformacion: "",
-  trabajado_con_orbel:       "",
-  observaciones:             "",
+  trabajado_con_orbel: "",
+  observaciones: "",
 };
 
 // =============================================
@@ -30,8 +30,8 @@ const validateStep = (step, form) => {
   const errors = {};
 
   if (step === 0) {
-    if (!form.nombre.trim())    errors.nombre    = "El nombre es obligatorio.";
-    if (!form.sexo)             errors.sexo      = "Selecciona el sexo.";
+    if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
+    if (!form.sexo) errors.sexo = "Selecciona el sexo.";
     if (!form.localidad.trim() || form.localidad === "__otra__")
       errors.localidad = "La localidad es obligatoria.";
   }
@@ -144,20 +144,20 @@ const Footer = ({ theme }) => (
 // COMPONENTE PRINCIPAL
 // =============================================
 export default function FormProfesorado() {
-  const [form, setForm]                   = useState(INITIAL_FORM);
+  const [form, setForm] = useState(INITIAL_FORM);
   const [localidadOtra, setLocalidadOtra] = useState("");
-  const [currentStep, setCurrentStep]     = useState(0);
-  const [errors, setErrors]               = useState({});
-  const [submitting, setSubmitting]       = useState(false);
-  const [submitResult, setSubmitResult]   = useState(null); // "success" | "error"
-  const [theme, setTheme]                 = useState("light");
+  const [currentStep, setCurrentStep] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null); // "success" | "error"
+  const [theme, setTheme] = useState("light");
 
   // Opciones dinámicas desde la API
   const [cursosDisponibles, setCursosDisponibles] = useState([]);
-  const [localidades, setLocalidades]             = useState([]);
-  const [loadingOpts, setLoadingOpts]             = useState(true);
+  const [localidades, setLocalidades] = useState([]);
+  const [loadingOpts, setLoadingOpts] = useState(true);
 
-  const STEPS       = ["Datos personales", "Perfil profesional", "Revisión"];
+  const STEPS = ["Datos personales", "Perfil profesional", "Revisión"];
   const TOTAL_STEPS = STEPS.length;
 
   // ——— Carga de opciones (misma llamada que appProfesorado) ———
@@ -228,30 +228,40 @@ export default function FormProfesorado() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      const currentYear = new Date().getFullYear().toString();
+
       const payload = {
-        action:                    "insertar",
-        nombre:                    form.nombre,
-        sexo:                      form.sexo === "NS" ? "" : form.sexo,
-        localidad:                 form.localidad,
-        titulacion:                form.titulacion,
-        cursos:                    form.cursos.join(", "),
-        precio:                    form.precio,
-        certificado_docencia:      form.certificado_docencia,
-        certificado_teleformacion: form.certificado_teleformacion,
-        trabajado_con_orbel:       form.trabajado_con_orbel,
-        observaciones:             form.observaciones,
+        action: "crear",
+        "AÑO": currentYear,
+        "NOMBRE": form.nombre,
+        "SEXO": form.sexo === "NS" ? "" : form.sexo,
+        "PROVINCIA": form.localidad,
+        "TITULACIÓN": form.titulacion,
+        "PRECIO": form.precio,
+        "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia,
+        "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion,
+
+        "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
+        "Entrevista curso AÑO": "NO",
+
+        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
+
+        "OBERV.": form.observaciones,
+
+        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
       };
 
-      const query = new URLSearchParams(payload).toString();
-      const res = await fetch(`${API_URL}?${query}`, {
-        method:  "POST",
+      const res = await fetch(`${API_URL}?action=crear`, {
+        method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("HTTP error");
+      if (!res.ok) throw new Error("HTTP error al conectar con Google Script");
+
       setSubmitResult("success");
-    } catch {
+    } catch (err) {
+      console.error("Error en envío:", err);
       setSubmitResult("error");
     } finally {
       setSubmitting(false);
@@ -317,7 +327,7 @@ export default function FormProfesorado() {
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <button className="btn-secondary" onClick={handleReset}>Empezar de nuevo</button>
-            <button className="btn-primary"   onClick={handleSubmit} disabled={submitting}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Reintentando…" : "🔄 Reintentar"}
             </button>
           </div>
@@ -358,9 +368,9 @@ export default function FormProfesorado() {
             <div className="grid-field full-width">
               <label className="label required">Sexo</label>
               <div className="radio-group">
-                <RadioCard label="Masculino" value="M"  emoji="♂️" selected={form.sexo === "M"}  onChange={v => handleRadio("sexo", v)} />
-                <RadioCard label="Femenino"  value="F"  emoji="♀️" selected={form.sexo === "F"}  onChange={v => handleRadio("sexo", v)} />
-                <RadioCard label="No indica" value="NS" emoji="—"  selected={form.sexo === "NS"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="Masculino" value="M" emoji="♂️" selected={form.sexo === "M"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="Femenino" value="F" emoji="♀️" selected={form.sexo === "F"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="No indica" value="NS" emoji="—" selected={form.sexo === "NS"} onChange={v => handleRadio("sexo", v)} />
               </div>
               {errors.sexo && <span className="field-error">{errors.sexo}</span>}
             </div>
@@ -489,8 +499,8 @@ export default function FormProfesorado() {
             <div className="grid-field">
               <label className="label required">Certificado Docencia (SSCE0110)</label>
               <div className="radio-group">
-                <RadioCard label="Sí"       value="Sí"       selected={form.certificado_docencia === "Sí"}       onChange={v => handleRadio("certificado_docencia", v)} />
-                <RadioCard label="No"       value="No"       selected={form.certificado_docencia === "No"}       onChange={v => handleRadio("certificado_docencia", v)} />
+                <RadioCard label="Sí" value="Sí" selected={form.certificado_docencia === "Sí"} onChange={v => handleRadio("certificado_docencia", v)} />
+                <RadioCard label="No" value="No" selected={form.certificado_docencia === "No"} onChange={v => handleRadio("certificado_docencia", v)} />
                 <RadioCard label="En curso" value="En curso" selected={form.certificado_docencia === "En curso"} onChange={v => handleRadio("certificado_docencia", v)} />
               </div>
               {errors.certificado_docencia && <span className="field-error">{errors.certificado_docencia}</span>}
@@ -500,8 +510,8 @@ export default function FormProfesorado() {
             <div className="grid-field">
               <label className="label required">Certificado E-Learning / Teleformación</label>
               <div className="radio-group">
-                <RadioCard label="Sí"       value="Sí"       selected={form.certificado_teleformacion === "Sí"}       onChange={v => handleRadio("certificado_teleformacion", v)} />
-                <RadioCard label="No"       value="No"       selected={form.certificado_teleformacion === "No"}       onChange={v => handleRadio("certificado_teleformacion", v)} />
+                <RadioCard label="Sí" value="Sí" selected={form.certificado_teleformacion === "Sí"} onChange={v => handleRadio("certificado_teleformacion", v)} />
+                <RadioCard label="No" value="No" selected={form.certificado_teleformacion === "No"} onChange={v => handleRadio("certificado_teleformacion", v)} />
                 <RadioCard label="En curso" value="En curso" selected={form.certificado_teleformacion === "En curso"} onChange={v => handleRadio("certificado_teleformacion", v)} />
               </div>
               {errors.certificado_teleformacion && <span className="field-error">{errors.certificado_teleformacion}</span>}
@@ -530,7 +540,7 @@ export default function FormProfesorado() {
           </div>
           <div className="form-nav">
             <button className="btn-secondary" onClick={handleBack}>← Atrás</button>
-            <button className="btn-primary"   onClick={handleNext}>Revisar datos →</button>
+            <button className="btn-primary" onClick={handleNext}>Revisar datos →</button>
           </div>
         </div>
       )}
@@ -540,20 +550,20 @@ export default function FormProfesorado() {
         <div>
           <div className="panel">
             <div className="panel-title">📋 Datos personales</div>
-            <ReviewRow label="Nombre"    value={form.nombre} />
-            <ReviewRow label="Sexo"      value={sexoLabel} />
+            <ReviewRow label="Nombre" value={form.nombre} />
+            <ReviewRow label="Sexo" value={sexoLabel} />
             <ReviewRow label="Localidad" value={form.localidad} />
           </div>
 
           <div className="panel">
             <div className="panel-title">🎓 Perfil profesional</div>
-            <ReviewRow label="Titulación"        value={form.titulacion} />
-            <ReviewRow label="Precio (€/h)"      value={form.precio ? `${form.precio} €` : null} />
-            <ReviewRow label="Cursos"            value={form.cursos.length > 0 ? form.cursos.join(", ") : null} />
-            <ReviewRow label="Cert. Docencia"    value={form.certificado_docencia} />
-            <ReviewRow label="Cert. E-Learning"  value={form.certificado_teleformacion} />
-            <ReviewRow label="Trabajó en Orbel"  value={form.trabajado_con_orbel} />
-            <ReviewRow label="Observaciones"     value={form.observaciones} />
+            <ReviewRow label="Titulación" value={form.titulacion} />
+            <ReviewRow label="Precio (€/h)" value={form.precio ? `${form.precio} €` : null} />
+            <ReviewRow label="Cursos" value={form.cursos.length > 0 ? form.cursos.join(", ") : null} />
+            <ReviewRow label="Cert. Docencia" value={form.certificado_docencia} />
+            <ReviewRow label="Cert. E-Learning" value={form.certificado_teleformacion} />
+            <ReviewRow label="Trabajó en Orbel" value={form.trabajado_con_orbel} />
+            <ReviewRow label="Observaciones" value={form.observaciones} />
           </div>
 
           <div style={{
@@ -566,7 +576,7 @@ export default function FormProfesorado() {
 
           <div className="form-nav">
             <button className="btn-secondary" onClick={handleBack}>← Editar</button>
-            <button className="btn-primary"   onClick={handleSubmit} disabled={submitting}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Enviando…" : "✅ Confirmar y guardar"}
             </button>
           </div>
