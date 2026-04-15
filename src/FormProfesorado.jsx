@@ -2,20 +2,17 @@ import { useState, useEffect } from "react";
 import "./index.css";
 
 // =============================================
-// MISMA URL que appProfesorado.
-// En tu Google Apps Script añade el case "insertar"
-// dentro del doPost() — ver README para el snippet.
+// URL API
 // =============================================
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
-// Estado inicial — campos exactos del modelo de datos existente
 const INITIAL_FORM = {
   nombre: "",
   sexo: "",
   localidad: "",
   titulacion: "",
-  cursos: [],  // array → CSV al enviar
+  cursos: [],
   precio: "",
   certificado_docencia: "",
   certificado_teleformacion: "",
@@ -24,19 +21,16 @@ const INITIAL_FORM = {
 };
 
 // =============================================
-// VALIDACIÓN POR PASO
+// VALIDACIÓN LIMPÍA Y DESACOPLADA
 // =============================================
-const validateStep = (step, form, localidadOtra) => {
+const validateStep = (step, form) => {
   const errors = {};
 
   if (step === 0) {
     if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
     if (!form.sexo) errors.sexo = "Selecciona el sexo.";
-
-    // ✅ Validación corregida para la localidad manual
-    if (!form.localidad || (form.localidad === "__otra__" && !localidadOtra.trim())) {
-      errors.localidad = "La localidad es obligatoria.";
-    }
+    // Al usar una única fuente de verdad, la validación vuelve a ser simple
+    if (!form.localidad.trim()) errors.localidad = "La localidad es obligatoria.";
   }
 
   if (step === 1) {
@@ -51,9 +45,8 @@ const validateStep = (step, form, localidadOtra) => {
 };
 
 // =============================================
-// SUB-COMPONENTES
+// SUB-COMPONENTES DE UI
 // =============================================
-
 const StepIndicator = ({ currentStep, totalSteps, stepLabels }) => {
   const progress = (currentStep / (totalSteps - 1)) * 100;
   return (
@@ -70,9 +63,7 @@ const StepIndicator = ({ currentStep, totalSteps, stepLabels }) => {
               </div>
               <span className={`step-label ${i === currentStep ? "active" : ""}`}>{label}</span>
             </div>
-            {i < totalSteps - 1 && (
-              <div className={`step-connector ${i < currentStep ? "done" : ""}`} />
-            )}
+            {i < totalSteps - 1 && <div className={`step-connector ${i < currentStep ? "done" : ""}`} />}
           </div>
         ))}
       </div>
@@ -103,11 +94,7 @@ const ReviewRow = ({ label, value }) => (
 );
 
 const ThemeToggle = ({ theme, setTheme }) => (
-  <button
-    className="theme-toggle"
-    onClick={() => setTheme(t => t === "light" ? "dark" : "light")}
-    title="Cambiar tema"
-  >
+  <button className="theme-toggle" onClick={() => setTheme(t => t === "light" ? "dark" : "light")} title="Cambiar tema">
     {theme === "light" ? "☀️" : "🌙"}
   </button>
 );
@@ -134,7 +121,9 @@ const Footer = ({ theme }) => (
 // =============================================
 export default function FormProfesorado() {
   const [form, setForm] = useState(INITIAL_FORM);
-  const [localidadOtra, setLocalidadOtra] = useState("");
+
+  const [isOtraLocalidad, setIsOtraLocalidad] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -152,18 +141,8 @@ export default function FormProfesorado() {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
       .then(data => {
-        setCursosDisponibles(
-          [...new Set(
-            data.flatMap(p =>
-              p.cursos
-                ? (Array.isArray(p.cursos) ? p.cursos : p.cursos.split(",").map(c => c.trim()))
-                : []
-            ).filter(Boolean)
-          )].sort()
-        );
-        setLocalidades(
-          [...new Set(data.map(p => p.localidad || p.PROVINCIA).filter(Boolean))].sort()
-        );
+        setCursosDisponibles([...new Set(data.flatMap(p => p.cursos ? (Array.isArray(p.cursos) ? p.cursos : p.cursos.split(",").map(c => c.trim())) : []).filter(Boolean))].sort());
+        setLocalidades([...new Set(data.map(p => p.localidad || p.PROVINCIA).filter(Boolean))].sort());
       })
       .catch(() => { })
       .finally(() => setLoadingOpts(false));
@@ -187,16 +166,13 @@ export default function FormProfesorado() {
   const handleCursoToggle = curso => {
     setForm(prev => ({
       ...prev,
-      cursos: prev.cursos.includes(curso)
-        ? prev.cursos.filter(c => c !== curso)
-        : [...prev.cursos, curso],
+      cursos: prev.cursos.includes(curso) ? prev.cursos.filter(c => c !== curso) : [...prev.cursos, curso],
     }));
     if (errors.cursos) setErrors(prev => ({ ...prev, cursos: undefined }));
   };
 
   const handleNext = () => {
-    // ✅ Pasamos localidadOtra al validador
-    const stepErrors = validateStep(currentStep, form, localidadOtra);
+    const stepErrors = validateStep(currentStep, form);
     if (Object.keys(stepErrors).length > 0) { setErrors(stepErrors); return; }
     setErrors({});
     setCurrentStep(prev => prev + 1);
@@ -215,12 +191,12 @@ export default function FormProfesorado() {
       const currentYear = new Date().getFullYear().toString();
 
       const payload = {
-        action: "crear", // Mantenido según tu lógica actual
+        action: "crear",
         "AÑO": currentYear,
         "NOMBRE": form.nombre,
         "SEXO": form.sexo === "NS" ? "" : form.sexo,
-        // ✅ Resolución correcta de provincia
-        "PROVINCIA": form.localidad === "__otra__" ? localidadOtra.trim() : form.localidad,
+        // El envío vuelve a ser limpio y directo
+        "PROVINCIA": form.localidad,
         "TITULACIÓN": form.titulacion,
         "PRECIO": form.precio,
         "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia,
@@ -238,11 +214,10 @@ export default function FormProfesorado() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("HTTP error al conectar con Google Script");
+      if (!res.ok) throw new Error("HTTP error");
 
       setSubmitResult("success");
     } catch (err) {
-      console.error("Error en envío:", err);
       setSubmitResult("error");
     } finally {
       setSubmitting(false);
@@ -251,7 +226,7 @@ export default function FormProfesorado() {
 
   const handleReset = () => {
     setForm(INITIAL_FORM);
-    setLocalidadOtra("");
+    setIsOtraLocalidad(false); // Reset del booleano
     setCurrentStep(0);
     setErrors({});
     setSubmitResult(null);
@@ -308,7 +283,7 @@ export default function FormProfesorado() {
       <StepIndicator currentStep={currentStep} totalSteps={TOTAL_STEPS} stepLabels={STEPS} />
 
       {currentStep === 0 && (
-        <div className="panel">
+        <div className="panel animate-in">
           <div className="panel-title">👤 Datos personales</div>
           <div className="grid-2">
             <div className="grid-field full-width">
@@ -327,13 +302,22 @@ export default function FormProfesorado() {
               {errors.sexo && <span className="field-error">{errors.sexo}</span>}
             </div>
 
-            {/* ✅ Lógica de Localidad corregida */}
             <div className="grid-field full-width">
               <label className="label required">Localidad</label>
               <select
-                name="localidad"
-                value={form.localidad}
-                onChange={handleChange}
+                name="localidadSelector"
+                value={isOtraLocalidad ? "__otra__" : form.localidad}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "__otra__") {
+                    setIsOtraLocalidad(true);
+                    setForm(prev => ({ ...prev, localidad: "" }));
+                  } else {
+                    setIsOtraLocalidad(false);
+                    setForm(prev => ({ ...prev, localidad: val }));
+                  }
+                  if (errors.localidad) setErrors(prev => ({ ...prev, localidad: undefined }));
+                }}
                 className={`input ${errors.localidad ? "error" : ""}`}
                 disabled={loadingOpts}
               >
@@ -342,16 +326,13 @@ export default function FormProfesorado() {
                 <option value="__otra__">Otra (escribir manualmente)</option>
               </select>
 
-              {form.localidad === "__otra__" && (
+              {isOtraLocalidad && (
                 <input
                   type="text"
-                  value={localidadOtra}
-                  autoFocus
+                  name="localidad"
+                  value={form.localidad}
                   autoComplete="off"
-                  onChange={e => {
-                    setLocalidadOtra(e.target.value);
-                    if (errors.localidad) setErrors(prev => ({ ...prev, localidad: undefined }));
-                  }}
+                  onChange={handleChange}
                   className={`input ${errors.localidad ? "error" : ""}`}
                   style={{ marginTop: 8 }}
                   placeholder="Escribe la localidad…"
@@ -359,6 +340,7 @@ export default function FormProfesorado() {
               )}
               {errors.localidad && <span className="field-error">{errors.localidad}</span>}
             </div>
+            {/* ========================================================= */}
           </div>
           <div className="form-nav">
             <button className="btn-primary" onClick={handleNext}>Siguiente →</button>
@@ -367,7 +349,7 @@ export default function FormProfesorado() {
       )}
 
       {currentStep === 1 && (
-        <div className="panel">
+        <div className="panel animate-in">
           <div className="panel-title">🎓 Perfil profesional</div>
           <div className="grid-2">
             <div className="grid-field full-width">
@@ -440,13 +422,13 @@ export default function FormProfesorado() {
       )}
 
       {currentStep === 2 && (
-        <div>
+        <div className="animate-in">
           <div className="panel">
             <div className="panel-title">📋 Datos personales</div>
             <ReviewRow label="Nombre" value={form.nombre} />
             <ReviewRow label="Sexo" value={sexoLabel} />
-            {/* ✅ Revisión correcta de localidad */}
-            <ReviewRow label="Localidad" value={form.localidad === "__otra__" ? localidadOtra : form.localidad} />
+            {/* Renderizado directo y limpio */}
+            <ReviewRow label="Localidad" value={form.localidad} />
           </div>
 
           <div className="panel">
