@@ -7,6 +7,7 @@ import "./index.css";
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
+// ✅ 1. Añadimos el campo de detalles_entrevista al estado inicial
 const INITIAL_FORM = {
   nombre: "",
   sexo: "",
@@ -15,13 +16,17 @@ const INITIAL_FORM = {
   cursos: [],
   precio: "",
   certificado_docencia: "",
+  fecha_docencia: "",
   certificado_teleformacion: "",
+  fecha_teleformacion: "",
   trabajado_con_orbel: "",
+  entrevista_curso_anio: "",
+  detalles_entrevista: "", // Nuevo campo de texto
   observaciones: "",
 };
 
 // =============================================
-// VALIDACIÓN LIMPÍA Y DESACOPLADA
+// VALIDACIÓN LIMPIA Y DESACOPLADA
 // =============================================
 const validateStep = (step, form) => {
   const errors = {};
@@ -29,16 +34,30 @@ const validateStep = (step, form) => {
   if (step === 0) {
     if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
     if (!form.sexo) errors.sexo = "Selecciona el sexo.";
-    // Al usar una única fuente de verdad, la validación vuelve a ser simple
     if (!form.localidad.trim()) errors.localidad = "La localidad es obligatoria.";
   }
 
   if (step === 1) {
     if (!form.titulacion.trim()) errors.titulacion = "La titulación es obligatoria.";
     if (form.cursos.length === 0) errors.cursos = "Selecciona al menos un curso.";
+
     if (!form.certificado_docencia) errors.certificado_docencia = "Campo obligatorio.";
+    if (form.certificado_docencia === "En curso" && !form.fecha_docencia.trim()) {
+      errors.fecha_docencia = "Indica cuándo prevés finalizarlo.";
+    }
+
     if (!form.certificado_teleformacion) errors.certificado_teleformacion = "Campo obligatorio.";
+    if (form.certificado_teleformacion === "En curso" && !form.fecha_teleformacion.trim()) {
+      errors.fecha_teleformacion = "Indica cuándo prevés finalizarlo.";
+    }
+
     if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
+
+    // ✅ 2. Validación de la entrevista y sus detalles
+    if (!form.entrevista_curso_anio) errors.entrevista_curso_anio = "Campo obligatorio.";
+    if (form.entrevista_curso_anio === "Sí" && !form.detalles_entrevista.trim()) {
+      errors.detalles_entrevista = "Especifica los detalles de la entrevista.";
+    }
   }
 
   return errors;
@@ -121,9 +140,7 @@ const Footer = ({ theme }) => (
 // =============================================
 export default function FormProfesorado() {
   const [form, setForm] = useState(INITIAL_FORM);
-
   const [isOtraLocalidad, setIsOtraLocalidad] = useState(false);
-
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -190,19 +207,29 @@ export default function FormProfesorado() {
     try {
       const currentYear = new Date().getFullYear().toString();
 
+      const docenciaFinal = form.certificado_docencia === "En curso"
+        ? `En curso (${form.fecha_docencia})`
+        : form.certificado_docencia;
+
+      const teleformacionFinal = form.certificado_teleformacion === "En curso"
+        ? `En curso (${form.fecha_teleformacion})`
+        : form.certificado_teleformacion;
+
       const payload = {
         action: "crear",
         "AÑO": currentYear,
         "NOMBRE": form.nombre,
         "SEXO": form.sexo === "NS" ? "" : form.sexo,
-        // El envío vuelve a ser limpio y directo
         "PROVINCIA": form.localidad,
         "TITULACIÓN": form.titulacion,
         "PRECIO": form.precio,
-        "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia,
-        "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion,
+        "CERTIF. DOCENCIA SSCE0110": docenciaFinal,
+        "CERTIF. TELEFORMACION/ E-LEARNIING": teleformacionFinal,
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-        "Entrevista curso AÑO": "NO",
+
+        // ✅ 3. Si marcó "Sí", se envía el texto escrito. Si marcó "No", se envía "NO".
+        "Entrevista curso AÑO": form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista.trim() : "NO",
+
         "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
         "OBERV.": form.observaciones,
         "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
@@ -226,7 +253,7 @@ export default function FormProfesorado() {
 
   const handleReset = () => {
     setForm(INITIAL_FORM);
-    setIsOtraLocalidad(false); // Reset del booleano
+    setIsOtraLocalidad(false);
     setCurrentStep(0);
     setErrors({});
     setSubmitResult(null);
@@ -340,7 +367,6 @@ export default function FormProfesorado() {
               )}
               {errors.localidad && <span className="field-error">{errors.localidad}</span>}
             </div>
-            {/* ========================================================= */}
           </div>
           <div className="form-nav">
             <button className="btn-primary" onClick={handleNext}>Siguiente →</button>
@@ -387,7 +413,22 @@ export default function FormProfesorado() {
                 <RadioCard label="No" value="No" selected={form.certificado_docencia === "No"} onChange={v => handleRadio("certificado_docencia", v)} />
                 <RadioCard label="En curso" value="En curso" selected={form.certificado_docencia === "En curso"} onChange={v => handleRadio("certificado_docencia", v)} />
               </div>
-              {errors.certificado_docencia && <span className="field-error">{errors.certificado_docencia}</span>}
+
+              {form.certificado_docencia === "En curso" && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    type="text"
+                    name="fecha_docencia"
+                    value={form.fecha_docencia}
+                    onChange={handleChange}
+                    className={`input ${errors.fecha_docencia ? "error" : ""}`}
+                    placeholder="Mes y año estimado (Ej: Sept 2026)"
+                    autoFocus
+                  />
+                  {errors.fecha_docencia && <span className="field-error">{errors.fecha_docencia}</span>}
+                </div>
+              )}
+              {errors.certificado_docencia && !errors.fecha_docencia && <span className="field-error">{errors.certificado_docencia}</span>}
             </div>
 
             <div className="grid-field">
@@ -397,7 +438,47 @@ export default function FormProfesorado() {
                 <RadioCard label="No" value="No" selected={form.certificado_teleformacion === "No"} onChange={v => handleRadio("certificado_teleformacion", v)} />
                 <RadioCard label="En curso" value="En curso" selected={form.certificado_teleformacion === "En curso"} onChange={v => handleRadio("certificado_teleformacion", v)} />
               </div>
-              {errors.certificado_teleformacion && <span className="field-error">{errors.certificado_teleformacion}</span>}
+
+              {form.certificado_teleformacion === "En curso" && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    type="text"
+                    name="fecha_teleformacion"
+                    value={form.fecha_teleformacion}
+                    onChange={handleChange}
+                    className={`input ${errors.fecha_teleformacion ? "error" : ""}`}
+                    placeholder="Mes y año estimado (Ej: Sept 2026)"
+                    autoFocus
+                  />
+                  {errors.fecha_teleformacion && <span className="field-error">{errors.fecha_teleformacion}</span>}
+                </div>
+              )}
+              {errors.certificado_teleformacion && !errors.fecha_teleformacion && <span className="field-error">{errors.certificado_teleformacion}</span>}
+            </div>
+
+            {/* ✅ 4. Lógica UI Entrevista: Renderiza input si selecciona "Sí" */}
+            <div className="grid-field full-width">
+              <label className="label required">¿Has realizado una entrevista con nosotros durante este año?</label>
+              <div className="radio-group">
+                <RadioCard label="Sí" value="Sí" emoji="🗣️" selected={form.entrevista_curso_anio === "Sí"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
+                <RadioCard label="No" value="No" emoji="❌" selected={form.entrevista_curso_anio === "No"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
+              </div>
+
+              {form.entrevista_curso_anio === "Sí" && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    type="text"
+                    name="detalles_entrevista"
+                    value={form.detalles_entrevista}
+                    onChange={handleChange}
+                    className={`input ${errors.detalles_entrevista ? "error" : ""}`}
+                    placeholder="Especifique curso o puesto (Ej. 2026 BJ / 2026 SOLDADURA)"
+                    autoFocus
+                  />
+                  {errors.detalles_entrevista && <span className="field-error">{errors.detalles_entrevista}</span>}
+                </div>
+              )}
+              {errors.entrevista_curso_anio && !errors.detalles_entrevista && <span className="field-error">{errors.entrevista_curso_anio}</span>}
             </div>
 
             <div className="grid-field full-width">
@@ -427,7 +508,6 @@ export default function FormProfesorado() {
             <div className="panel-title">📋 Datos personales</div>
             <ReviewRow label="Nombre" value={form.nombre} />
             <ReviewRow label="Sexo" value={sexoLabel} />
-            {/* Renderizado directo y limpio */}
             <ReviewRow label="Localidad" value={form.localidad} />
           </div>
 
@@ -436,8 +516,22 @@ export default function FormProfesorado() {
             <ReviewRow label="Titulación" value={form.titulacion} />
             <ReviewRow label="Precio (€/h)" value={form.precio ? `${form.precio} €` : null} />
             <ReviewRow label="Cursos" value={form.cursos.length > 0 ? form.cursos.join(", ") : null} />
-            <ReviewRow label="Cert. Docencia" value={form.certificado_docencia} />
-            <ReviewRow label="Cert. E-Learning" value={form.certificado_teleformacion} />
+
+            <ReviewRow
+              label="Cert. Docencia"
+              value={form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia}
+            />
+            <ReviewRow
+              label="Cert. E-Learning"
+              value={form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion}
+            />
+
+            {/* ✅ 5. Nueva fila en la revisión (Muestra los detalles o NO según corresponda) */}
+            <ReviewRow
+              label="Entrevista este año"
+              value={form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista : "NO"}
+            />
+
             <ReviewRow label="Trabajó en Orbel" value={form.trabajado_con_orbel} />
             <ReviewRow label="Observaciones" value={form.observaciones} />
           </div>
