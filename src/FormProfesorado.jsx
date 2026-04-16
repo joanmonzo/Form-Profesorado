@@ -7,21 +7,20 @@ import "./index.css";
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
-// ✅ 1. Añadimos el campo de detalles_entrevista al estado inicial
 const INITIAL_FORM = {
   nombre: "",
   sexo: "",
   localidad: "",
   titulacion: "",
   cursos: [],
-  precio: "",
+  precio: "", // Ahora restringido a rango
   certificado_docencia: "",
   fecha_docencia: "",
   certificado_teleformacion: "",
   fecha_teleformacion: "",
   trabajado_con_orbel: "",
   entrevista_curso_anio: "",
-  detalles_entrevista: "", // Nuevo campo de texto
+  detalles_entrevista: "",
   observaciones: "",
 };
 
@@ -39,6 +38,18 @@ const validateStep = (step, form) => {
 
   if (step === 1) {
     if (!form.titulacion.trim()) errors.titulacion = "La titulación es obligatoria.";
+
+    // ✅ Restricción estricta del campo Precio (Regex)
+    if (!form.precio.trim()) {
+      errors.precio = "El precio es obligatorio.";
+    } else {
+      // Permite números (con coma o punto opcional) separados por guion con espacios opcionales
+      const regexRango = /^\d+([.,]\d+)?\s*-\s*\d+([.,]\d+)?$/;
+      if (!regexRango.test(form.precio.trim())) {
+        errors.precio = "Formato inválido. Debe ser un rango con guion (Ej: 20-30).";
+      }
+    }
+
     if (form.cursos.length === 0) errors.cursos = "Selecciona al menos un curso.";
 
     if (!form.certificado_docencia) errors.certificado_docencia = "Campo obligatorio.";
@@ -53,7 +64,6 @@ const validateStep = (step, form) => {
 
     if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
 
-    // ✅ 2. Validación de la entrevista y sus detalles
     if (!form.entrevista_curso_anio) errors.entrevista_curso_anio = "Campo obligatorio.";
     if (form.entrevista_curso_anio === "Sí" && !form.detalles_entrevista.trim()) {
       errors.detalles_entrevista = "Especifica los detalles de la entrevista.";
@@ -222,14 +232,11 @@ export default function FormProfesorado() {
         "SEXO": form.sexo === "NS" ? "" : form.sexo,
         "PROVINCIA": form.localidad,
         "TITULACIÓN": form.titulacion,
-        "PRECIO": form.precio,
+        "PRECIO": form.precio.trim(), // Enviamos limpio de espacios extra
         "CERTIF. DOCENCIA SSCE0110": docenciaFinal,
         "CERTIF. TELEFORMACION/ E-LEARNIING": teleformacionFinal,
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-
-        // ✅ 3. Si marcó "Sí", se envía el texto escrito. Si marcó "No", se envía "NO".
         "Entrevista curso AÑO": form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista.trim() : "NO",
-
         "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
         "OBERV.": form.observaciones,
         "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
@@ -384,10 +391,22 @@ export default function FormProfesorado() {
               {errors.titulacion && <span className="field-error">{errors.titulacion}</span>}
             </div>
 
+            {/* ✅ UI Restringida para Precio */}
             <div className="grid-field full-width">
-              <label className="label">Precio (€/hora)</label>
-              <input type="text" name="precio" value={form.precio} onChange={handleChange} autoComplete="off" className="input" placeholder="Ej. 25  o  20-30 (rango)" />
-              <span className="hint">Valor fijo o rango separado por guión, ej. <em>20-30</em>.</span>
+              <label className="label required">Rango de Precio (€/hora)</label>
+              <input
+                type="text"
+                name="precio"
+                value={form.precio}
+                onChange={handleChange}
+                autoComplete="off"
+                className={`input ${errors.precio ? "error" : ""}`}
+                placeholder="Ej. 20-30"
+              />
+              <span className="hint" style={{ color: errors.precio ? "var(--danger-text)" : "var(--text-muted)" }}>
+                Obligatorio escribir un rango separado por guion (Ej. <em>20-30</em>).
+              </span>
+              {errors.precio && <span className="field-error">{errors.precio}</span>}
             </div>
 
             <div className="grid-field full-width">
@@ -456,7 +475,6 @@ export default function FormProfesorado() {
               {errors.certificado_teleformacion && !errors.fecha_teleformacion && <span className="field-error">{errors.certificado_teleformacion}</span>}
             </div>
 
-            {/* ✅ 4. Lógica UI Entrevista: Renderiza input si selecciona "Sí" */}
             <div className="grid-field full-width">
               <label className="label required">¿Has realizado una entrevista con nosotros durante este año?</label>
               <div className="radio-group">
@@ -526,7 +544,6 @@ export default function FormProfesorado() {
               value={form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion}
             />
 
-            {/* ✅ 5. Nueva fila en la revisión (Muestra los detalles o NO según corresponda) */}
             <ReviewRow
               label="Entrevista este año"
               value={form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista : "NO"}
