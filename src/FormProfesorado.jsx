@@ -39,11 +39,9 @@ const validateStep = (step, form) => {
   if (step === 1) {
     if (!form.titulacion.trim()) errors.titulacion = "La titulación es obligatoria.";
 
-    // ✅ Restricción estricta del campo Precio (Regex)
     if (!form.precio.trim()) {
       errors.precio = "El precio es obligatorio.";
     } else {
-      // Permite números (con coma o punto opcional) separados por guion con espacios opcionales
       const regexRango = /^\d+([.,]\d+)?\s*-\s*\d+([.,]\d+)?$/;
       if (!regexRango.test(form.precio.trim())) {
         errors.precio = "Formato inválido. Debe ser un rango con guion (Ej: 20-30).";
@@ -232,7 +230,7 @@ export default function FormProfesorado() {
         "SEXO": form.sexo === "NS" ? "" : form.sexo,
         "PROVINCIA": form.localidad,
         "TITULACIÓN": form.titulacion,
-        "PRECIO": form.precio.trim(), // Enviamos limpio de espacios extra
+        "PRECIO": form.precio.trim(),
         "CERTIF. DOCENCIA SSCE0110": docenciaFinal,
         "CERTIF. TELEFORMACION/ E-LEARNIING": teleformacionFinal,
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
@@ -391,7 +389,6 @@ export default function FormProfesorado() {
               {errors.titulacion && <span className="field-error">{errors.titulacion}</span>}
             </div>
 
-            {/* ✅ UI Restringida para Precio */}
             <div className="grid-field full-width">
               <label className="label required">Rango de Precio (€/hora)</label>
               <input
