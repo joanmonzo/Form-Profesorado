@@ -76,21 +76,48 @@ const validateStep = (step, form) => {
 // =============================================
 const StepIndicator = ({ currentStep, totalSteps, stepLabels }) => {
   const progress = (currentStep / (totalSteps - 1)) * 100;
+
   return (
-    <div>
-      <div className="progress-bar-track">
-        <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+    <div style={{ position: "relative", marginBottom: "40px" }}>
+      {/* 1. Línea de progreso de fondo (completamente simétrica) */}
+      <div style={{
+        position: "absolute",
+        top: "16px", /* Exactamente a la mitad del círculo */
+        left: "16%", /* Margen para que empiece en el centro del punto 1 */
+        right: "16%", /* Margen para que acabe en el centro del punto 3 */
+        height: "3px",
+        background: "var(--border-color)",
+        zIndex: 0,
+      }}>
+        <div style={{
+          width: `${progress}%`,
+          height: "100%",
+          background: "var(--primary-color)",
+          transition: "width 0.4s ease-in-out"
+        }} />
       </div>
-      <div className="step-indicator">
+
+      <div className="step-indicator" style={{ display: "flex", position: "relative", zIndex: 1 }}>
         {stepLabels.map((label, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center" }}>
-            <div className="step-item">
-              <div className={`step-circle ${i < currentStep ? "done" : i === currentStep ? "active" : ""}`}>
-                {i < currentStep ? "✓" : i + 1}
-              </div>
-              <span className={`step-label ${i === currentStep ? "active" : ""}`}>{label}</span>
+          <div
+            key={i}
+            className="step-item"
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}
+          >
+            <div className={`step-circle ${i < currentStep ? "done" : i === currentStep ? "active" : ""}`}>
+              {i < currentStep ? "✓" : i + 1}
             </div>
-            {i < totalSteps - 1 && <div className={`step-connector ${i < currentStep ? "done" : ""}`} />}
+            <span
+              className={`step-label ${i === currentStep ? "active" : ""}`}
+              style={{ textAlign: "center", marginTop: "8px", maxWidth: "120px" }}
+            >
+              {label}
+            </span>
           </div>
         ))}
       </div>
@@ -398,7 +425,6 @@ export default function FormProfesorado() {
                 onChange={handleChange}
                 autoComplete="off"
                 className={`input ${errors.precio ? "error" : ""}`}
-                placeholder="Ej. 20-30"
               />
               <span className="hint" style={{ color: errors.precio ? "var(--danger-text)" : "var(--text-muted)" }}>
                 Obligatorio escribir un rango separado por guion (Ej. <em>20-30</em>).
@@ -473,7 +499,7 @@ export default function FormProfesorado() {
             </div>
 
             <div className="grid-field full-width">
-              <label className="label required">¿Has realizado una entrevista con nosotros durante este año?</label>
+              <label className="label required">¿Has realizado alguna entrevista con nosotros (este año o anteriores)?</label>
               <div className="radio-group">
                 <RadioCard label="Sí" value="Sí" emoji="🗣️" selected={form.entrevista_curso_anio === "Sí"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
                 <RadioCard label="No" value="No" emoji="❌" selected={form.entrevista_curso_anio === "No"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
@@ -487,7 +513,7 @@ export default function FormProfesorado() {
                     value={form.detalles_entrevista}
                     onChange={handleChange}
                     className={`input ${errors.detalles_entrevista ? "error" : ""}`}
-                    placeholder="Especifique curso o puesto (Ej. 2026 BJ / 2026 SOLDADURA)"
+                    placeholder="Especifique año y curso o puesto (Ej. 2026 BJ / 2024 SOLDADURA)"
                     autoFocus
                   />
                   {errors.detalles_entrevista && <span className="field-error">{errors.detalles_entrevista}</span>}
@@ -542,7 +568,7 @@ export default function FormProfesorado() {
             />
 
             <ReviewRow
-              label="Entrevista este año"
+              label="Entrevista realizada"
               value={form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista : "NO"}
             />
 
