@@ -193,8 +193,11 @@ export default function FormProfesorado() {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
       .then(data => {
-        setCursosDisponibles([...new Set(data.flatMap(p => p.cursos ? (Array.isArray(p.cursos) ? p.cursos : p.cursos.split(",").map(c => c.trim())) : []).filter(Boolean))].sort());
-        setLocalidades([...new Set(data.map(p => p.localidad || p.PROVINCIA).filter(Boolean))].sort());
+        const cursos = data.flatMap(p => p.cursos ? (Array.isArray(p.cursos) ? p.cursos : p.cursos.split(",").map(c => c.trim())) : []).filter(Boolean).map(c => c.toUpperCase());
+        const locs = data.map(p => (p.localidad || p.PROVINCIA)).filter(Boolean).map(l => l.toUpperCase());
+
+        setCursosDisponibles([...new Set(cursos)].sort());
+        setLocalidades([...new Set(locs)].sort());
       })
       .catch(() => { })
       .finally(() => setLoadingOpts(false));
@@ -206,12 +209,15 @@ export default function FormProfesorado() {
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    // Forzar mayúsculas en el estado
+    const upperValue = typeof value === "string" ? value.toUpperCase() : value;
+    setForm(prev => ({ ...prev, [name]: upperValue }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
   const handleRadio = (name, value) => {
-    setForm(prev => ({ ...prev, [name]: value }));
+    const upperValue = typeof value === "string" ? value.toUpperCase() : value;
+    setForm(prev => ({ ...prev, [name]: upperValue }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
@@ -242,29 +248,34 @@ export default function FormProfesorado() {
     try {
       const currentYear = new Date().getFullYear().toString();
 
-      const docenciaFinal = form.certificado_docencia === "En curso"
-        ? `En curso (${form.fecha_docencia})`
+      const docenciaFinal = form.certificado_docencia === "EN CURSO"
+        ? `EN CURSO (${form.fecha_docencia})`
         : form.certificado_docencia;
 
-      const teleformacionFinal = form.certificado_teleformacion === "En curso"
-        ? `En curso (${form.fecha_teleformacion})`
+      const teleformacionFinal = form.certificado_teleformacion === "EN CURSO"
+        ? `EN CURSO (${form.fecha_teleformacion})`
         : form.certificado_teleformacion;
+
+      const excelFormat = (val) => {
+        if (typeof val !== "string") return val;
+        return val.toUpperCase().replace(/SÍ/g, "SI");
+      };
 
       const payload = {
         action: "crear",
         "AÑO": currentYear,
-        "NOMBRE": form.nombre,
-        "SEXO": form.sexo === "NS" ? "" : form.sexo,
-        "PROVINCIA": form.localidad,
-        "TITULACIÓN": form.titulacion,
-        "PRECIO": form.precio.trim(),
-        "CERTIF. DOCENCIA SSCE0110": docenciaFinal,
-        "CERTIF. TELEFORMACION/ E-LEARNIING": teleformacionFinal,
+        "NOMBRE": excelFormat(form.nombre),
+        "SEXO": excelFormat(form.sexo === "NS" ? "" : form.sexo),
+        "PROVINCIA": excelFormat(form.localidad),
+        "TITULACIÓN": excelFormat(form.titulacion),
+        "PRECIO": excelFormat(form.precio.trim()),
+        "CERTIF. DOCENCIA SSCE0110": excelFormat(docenciaFinal),
+        "CERTIF. TELEFORMACION/ E-LEARNIING": excelFormat(teleformacionFinal),
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-        "Entrevista curso AÑO": form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista.trim() : "NO",
-        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
-        "OBERV.": form.observaciones,
-        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
+        "Entrevista curso AÑO": excelFormat(form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista.trim() : "NO"),
+        "TRABAJADO CON ORBEL ": excelFormat(form.trabajado_con_orbel),
+        "OBERV.": excelFormat(form.observaciones),
+        "CURSOS": form.cursos.length > 0 ? "SI" : "NO",
       };
 
       const res = await fetch(`${API_URL}?action=crear`, {
@@ -354,9 +365,9 @@ export default function FormProfesorado() {
             <div className="grid-field full-width">
               <label className="label required">Sexo</label>
               <div className="radio-group">
-                <RadioCard label="Masculino" value="M" emoji="♂️" selected={form.sexo === "M"} onChange={v => handleRadio("sexo", v)} />
-                <RadioCard label="Femenino" value="F" emoji="♀️" selected={form.sexo === "F"} onChange={v => handleRadio("sexo", v)} />
-                <RadioCard label="No indica" value="NS" emoji="—" selected={form.sexo === "NS"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="MASCULINO" value="M" emoji="♂️" selected={form.sexo === "M"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="FEMENINO" value="F" emoji="♀️" selected={form.sexo === "F"} onChange={v => handleRadio("sexo", v)} />
+                <RadioCard label="NO INDICA" value="NS" emoji="—" selected={form.sexo === "NS"} onChange={v => handleRadio("sexo", v)} />
               </div>
               {errors.sexo && <span className="field-error">{errors.sexo}</span>}
             </div>
@@ -451,12 +462,12 @@ export default function FormProfesorado() {
             <div className="grid-field">
               <label className="label required">Certificado Docencia (SSCE0110)</label>
               <div className="radio-group">
-                <RadioCard label="Sí" value="Sí" selected={form.certificado_docencia === "Sí"} onChange={v => handleRadio("certificado_docencia", v)} />
-                <RadioCard label="No" value="No" selected={form.certificado_docencia === "No"} onChange={v => handleRadio("certificado_docencia", v)} />
-                <RadioCard label="En curso" value="En curso" selected={form.certificado_docencia === "En curso"} onChange={v => handleRadio("certificado_docencia", v)} />
+                <RadioCard label="SÍ" value="SÍ" selected={form.certificado_docencia === "SÍ"} onChange={v => handleRadio("certificado_docencia", v)} />
+                <RadioCard label="NO" value="NO" selected={form.certificado_docencia === "NO"} onChange={v => handleRadio("certificado_docencia", v)} />
+                <RadioCard label="EN CURSO" value="EN CURSO" selected={form.certificado_docencia === "EN CURSO"} onChange={v => handleRadio("certificado_docencia", v)} />
               </div>
 
-              {form.certificado_docencia === "En curso" && (
+              {form.certificado_docencia === "EN CURSO" && (
                 <div style={{ marginTop: 8 }}>
                   <input
                     type="text"
@@ -464,7 +475,7 @@ export default function FormProfesorado() {
                     value={form.fecha_docencia}
                     onChange={handleChange}
                     className={`input ${errors.fecha_docencia ? "error" : ""}`}
-                    placeholder="Mes y año estimado (Ej: Sept 2026)"
+                    placeholder="MES Y AÑO ESTIMADO (EJ: SEPT 2026)"
                     autoFocus
                   />
                   {errors.fecha_docencia && <span className="field-error">{errors.fecha_docencia}</span>}
@@ -476,12 +487,12 @@ export default function FormProfesorado() {
             <div className="grid-field">
               <label className="label required">Certificado E-Learning / Teleformación</label>
               <div className="radio-group">
-                <RadioCard label="Sí" value="Sí" selected={form.certificado_teleformacion === "Sí"} onChange={v => handleRadio("certificado_teleformacion", v)} />
-                <RadioCard label="No" value="No" selected={form.certificado_teleformacion === "No"} onChange={v => handleRadio("certificado_teleformacion", v)} />
-                <RadioCard label="En curso" value="En curso" selected={form.certificado_teleformacion === "En curso"} onChange={v => handleRadio("certificado_teleformacion", v)} />
+                <RadioCard label="SÍ" value="SÍ" selected={form.certificado_teleformacion === "SÍ"} onChange={v => handleRadio("certificado_teleformacion", v)} />
+                <RadioCard label="NO" value="NO" selected={form.certificado_teleformacion === "NO"} onChange={v => handleRadio("certificado_teleformacion", v)} />
+                <RadioCard label="EN CURSO" value="EN CURSO" selected={form.certificado_teleformacion === "EN CURSO"} onChange={v => handleRadio("certificado_teleformacion", v)} />
               </div>
 
-              {form.certificado_teleformacion === "En curso" && (
+              {form.certificado_teleformacion === "EN CURSO" && (
                 <div style={{ marginTop: 8 }}>
                   <input
                     type="text"
@@ -489,7 +500,7 @@ export default function FormProfesorado() {
                     value={form.fecha_teleformacion}
                     onChange={handleChange}
                     className={`input ${errors.fecha_teleformacion ? "error" : ""}`}
-                    placeholder="Mes y año estimado (Ej: Sept 2026)"
+                    placeholder="MES Y AÑO ESTIMADO (EJ: SEPT 2026)"
                     autoFocus
                   />
                   {errors.fecha_teleformacion && <span className="field-error">{errors.fecha_teleformacion}</span>}
@@ -501,11 +512,11 @@ export default function FormProfesorado() {
             <div className="grid-field full-width">
               <label className="label required">¿Has realizado alguna entrevista con nosotros (este año o anteriores)?</label>
               <div className="radio-group">
-                <RadioCard label="Sí" value="Sí" emoji="🗣️" selected={form.entrevista_curso_anio === "Sí"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
-                <RadioCard label="No" value="No" emoji="❌" selected={form.entrevista_curso_anio === "No"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
+                <RadioCard label="SÍ" value="SÍ" emoji="🗣️" selected={form.entrevista_curso_anio === "SÍ"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
+                <RadioCard label="NO" value="NO" emoji="❌" selected={form.entrevista_curso_anio === "NO"} onChange={v => handleRadio("entrevista_curso_anio", v)} />
               </div>
 
-              {form.entrevista_curso_anio === "Sí" && (
+              {form.entrevista_curso_anio === "SÍ" && (
                 <div style={{ marginTop: 8 }}>
                   <input
                     type="text"
@@ -513,7 +524,7 @@ export default function FormProfesorado() {
                     value={form.detalles_entrevista}
                     onChange={handleChange}
                     className={`input ${errors.detalles_entrevista ? "error" : ""}`}
-                    placeholder="Especifique año y curso o puesto (Ej. 2026 BJ / 2024 SOLDADURA)"
+                    placeholder="ESPECIFIQUE AÑO Y CURSO O PUESTO (EJ. 2026 BJ / 2024 SOLDADURA)"
                     autoFocus
                   />
                   {errors.detalles_entrevista && <span className="field-error">{errors.detalles_entrevista}</span>}
@@ -525,8 +536,8 @@ export default function FormProfesorado() {
             <div className="grid-field full-width">
               <label className="label required">¿Ha trabajado anteriormente con Orbel?</label>
               <div className="radio-group">
-                <RadioCard label="Sí" value="Sí" emoji="✅" selected={form.trabajado_con_orbel === "Sí"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
-                <RadioCard label="No" value="No" emoji="❌" selected={form.trabajado_con_orbel === "No"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
+                <RadioCard label="SÍ" value="SÍ" emoji="✅" selected={form.trabajado_con_orbel === "SÍ"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
+                <RadioCard label="NO" value="NO" emoji="❌" selected={form.trabajado_con_orbel === "NO"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
               </div>
               {errors.trabajado_con_orbel && <span className="field-error">{errors.trabajado_con_orbel}</span>}
             </div>
@@ -560,16 +571,16 @@ export default function FormProfesorado() {
 
             <ReviewRow
               label="Cert. Docencia"
-              value={form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia}
+              value={form.certificado_docencia === "EN CURSO" ? `EN CURSO (${form.fecha_docencia})` : form.certificado_docencia}
             />
             <ReviewRow
               label="Cert. E-Learning"
-              value={form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion}
+              value={form.certificado_teleformacion === "EN CURSO" ? `EN CURSO (${form.fecha_teleformacion})` : form.certificado_teleformacion}
             />
 
             <ReviewRow
               label="Entrevista realizada"
-              value={form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista : "NO"}
+              value={form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista : "NO"}
             />
 
             <ReviewRow label="Trabajó en Orbel" value={form.trabajado_con_orbel} />

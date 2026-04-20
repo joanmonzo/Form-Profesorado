@@ -122,6 +122,7 @@ body {
   font-family: 'Ubuntu', sans-serif;
   transition: border-color 0.2s, box-shadow 0.2s;
   appearance: none;
+  text-transform: uppercase;
 }
 
 .input:focus {
