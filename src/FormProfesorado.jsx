@@ -19,6 +19,7 @@ const INITIAL_FORM = {
   certificado_teleformacion: "",
   fecha_teleformacion: "",
   trabajado_con_orbel: "",
+  anio_trabajado_orbel: "",
   entrevista_curso_anio: "",
   detalles_entrevista: "",
   observaciones: "",
@@ -51,19 +52,22 @@ const validateStep = (step, form) => {
     if (form.cursos.length === 0) errors.cursos = "Selecciona al menos un curso.";
 
     if (!form.certificado_docencia) errors.certificado_docencia = "Campo obligatorio.";
-    if (form.certificado_docencia === "En curso" && !form.fecha_docencia.trim()) {
+    if (form.certificado_docencia === "EN CURSO" && !form.fecha_docencia.trim()) {
       errors.fecha_docencia = "Indica cuándo prevés finalizarlo.";
     }
 
     if (!form.certificado_teleformacion) errors.certificado_teleformacion = "Campo obligatorio.";
-    if (form.certificado_teleformacion === "En curso" && !form.fecha_teleformacion.trim()) {
+    if (form.certificado_teleformacion === "EN CURSO" && !form.fecha_teleformacion.trim()) {
       errors.fecha_teleformacion = "Indica cuándo prevés finalizarlo.";
     }
 
     if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
+    if (form.trabajado_con_orbel === "SÍ" && !form.anio_trabajado_orbel.trim()) {
+      errors.anio_trabajado_orbel = "Indica el año.";
+    }
 
     if (!form.entrevista_curso_anio) errors.entrevista_curso_anio = "Campo obligatorio.";
-    if (form.entrevista_curso_anio === "Sí" && !form.detalles_entrevista.trim()) {
+    if (form.entrevista_curso_anio === "SÍ" && !form.detalles_entrevista.trim()) {
       errors.detalles_entrevista = "Especifica los detalles de la entrevista.";
     }
   }
@@ -273,7 +277,7 @@ export default function FormProfesorado() {
         "CERTIF. TELEFORMACION/ E-LEARNIING": excelFormat(teleformacionFinal),
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
         "Entrevista curso AÑO": excelFormat(form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista.trim() : "NO"),
-        "TRABAJADO CON ORBEL ": excelFormat(form.trabajado_con_orbel),
+        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel === "SÍ" ? `SI ${form.anio_trabajado_orbel}` : "NO",
         "OBERV.": excelFormat(form.observaciones),
         "CURSOS": form.cursos.length > 0 ? "SI" : "NO",
       };
@@ -539,7 +543,22 @@ export default function FormProfesorado() {
                 <RadioCard label="SÍ" value="SÍ" emoji="✅" selected={form.trabajado_con_orbel === "SÍ"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
                 <RadioCard label="NO" value="NO" emoji="❌" selected={form.trabajado_con_orbel === "NO"} onChange={v => handleRadio("trabajado_con_orbel", v)} />
               </div>
-              {errors.trabajado_con_orbel && <span className="field-error">{errors.trabajado_con_orbel}</span>}
+
+              {form.trabajado_con_orbel === "SÍ" && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    type="text"
+                    name="anio_trabajado_orbel"
+                    value={form.anio_trabajado_orbel}
+                    onChange={handleChange}
+                    className={`input ${errors.anio_trabajado_orbel ? "error" : ""}`}
+                    placeholder="AÑO (EJ. 2024)"
+                    autoFocus
+                  />
+                  {errors.anio_trabajado_orbel && <span className="field-error">{errors.anio_trabajado_orbel}</span>}
+                </div>
+              )}
+              {errors.trabajado_con_orbel && !errors.anio_trabajado_orbel && <span className="field-error">{errors.trabajado_con_orbel}</span>}
             </div>
 
             <div className="grid-field full-width">
@@ -583,7 +602,10 @@ export default function FormProfesorado() {
               value={form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista : "NO"}
             />
 
-            <ReviewRow label="Trabajó en Orbel" value={form.trabajado_con_orbel} />
+            <ReviewRow
+              label="Trabajó en Orbel"
+              value={form.trabajado_con_orbel === "SÍ" ? `SÍ (${form.anio_trabajado_orbel})` : "NO"}
+            />
             <ReviewRow label="Observaciones" value={form.observaciones} />
           </div>
 
