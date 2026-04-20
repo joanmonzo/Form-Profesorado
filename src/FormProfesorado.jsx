@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import "./index.css";
 
-// =============================================
-// URL API
-// =============================================
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
@@ -13,7 +10,7 @@ const INITIAL_FORM = {
   localidad: "",
   titulacion: "",
   cursos: [],
-  precio: "", // Ahora restringido a rango
+  precio: "",
   certificado_docencia: "",
   fecha_docencia: "",
   certificado_teleformacion: "",
@@ -26,9 +23,6 @@ const INITIAL_FORM = {
   observaciones: "",
 };
 
-// =============================================
-// VALIDACIÓN LIMPIA Y DESACOPLADA
-// =============================================
 const validateStep = (step, form) => {
   const errors = {};
 
@@ -77,20 +71,16 @@ const validateStep = (step, form) => {
   return errors;
 };
 
-// =============================================
-// SUB-COMPONENTES DE UI
-// =============================================
 const StepIndicator = ({ currentStep, totalSteps, stepLabels }) => {
   const progress = (currentStep / (totalSteps - 1)) * 100;
 
   return (
     <div style={{ position: "relative", marginBottom: "40px" }}>
-      {/* 1. Línea de progreso de fondo (completamente simétrica) */}
       <div style={{
         position: "absolute",
-        top: "16px", /* Exactamente a la mitad del círculo */
-        left: "16%", /* Margen para que empiece en el centro del punto 1 */
-        right: "16%", /* Margen para que acabe en el centro del punto 3 */
+        top: "16px",
+        left: "16%",
+        right: "16%",
         height: "3px",
         background: "var(--border-color)",
         zIndex: 0,
@@ -176,9 +166,6 @@ const Footer = ({ theme }) => (
   </footer>
 );
 
-// =============================================
-// COMPONENTE PRINCIPAL
-// =============================================
 export default function FormProfesorado() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [isOtraLocalidad, setIsOtraLocalidad] = useState(false);
@@ -215,7 +202,6 @@ export default function FormProfesorado() {
 
   const handleChange = e => {
     const { name, value } = e.target;
-    // Forzar mayúsculas en el estado
     const upperValue = typeof value === "string" ? value.toUpperCase() : value;
     setForm(prev => ({ ...prev, [name]: upperValue }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
@@ -267,7 +253,7 @@ export default function FormProfesorado() {
         return val
           .toUpperCase()
           .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos para legibilidad en Excel
+          .replace(/[\u0300-\u036f]/g, "");
       };
 
       const payload = {
@@ -465,14 +451,14 @@ export default function FormProfesorado() {
                   ))}
                 </div>
               ) : (
-                <input 
-                  type="text" 
-                  className="input" 
-                  placeholder="EJ. SOLDADURA, ELECTRICIDAD, PRL…" 
-                  onChange={e => setForm(prev => ({ 
-                    ...prev, 
-                    cursos: e.target.value.toUpperCase().split(",").map(c => c.trim()).filter(Boolean) 
-                  }))} 
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="EJ. SOLDADURA, ELECTRICIDAD, PRL…"
+                  onChange={e => setForm(prev => ({
+                    ...prev,
+                    cursos: e.target.value.toUpperCase().split(",").map(c => c.trim()).filter(Boolean)
+                  }))}
                 />
               )}
               {errors.cursos && <span className="field-error">{errors.cursos}</span>}
