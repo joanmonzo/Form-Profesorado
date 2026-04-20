@@ -21,7 +21,8 @@ const INITIAL_FORM = {
   trabajado_con_orbel: "",
   anio_trabajado_orbel: "",
   entrevista_curso_anio: "",
-  detalles_entrevista: "",
+  entrevista_fecha: "",
+  entrevista_curso: "",
   observaciones: "",
 };
 
@@ -67,8 +68,9 @@ const validateStep = (step, form) => {
     }
 
     if (!form.entrevista_curso_anio) errors.entrevista_curso_anio = "Campo obligatorio.";
-    if (form.entrevista_curso_anio === "SÍ" && !form.detalles_entrevista.trim()) {
-      errors.detalles_entrevista = "Especifica los detalles de la entrevista.";
+    if (form.entrevista_curso_anio === "SÍ") {
+      if (!form.entrevista_fecha) errors.entrevista_fecha = "Selecciona la fecha.";
+      if (!form.entrevista_curso) errors.entrevista_curso = "Selecciona el curso.";
     }
   }
 
@@ -262,7 +264,10 @@ export default function FormProfesorado() {
 
       const excelFormat = (val) => {
         if (typeof val !== "string") return val;
-        return val.toUpperCase().replace(/SÍ/g, "SI");
+        return val
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos para legibilidad en Excel
       };
 
       const payload = {
@@ -276,7 +281,9 @@ export default function FormProfesorado() {
         "CERTIF. DOCENCIA SSCE0110": excelFormat(docenciaFinal),
         "CERTIF. TELEFORMACION/ E-LEARNIING": excelFormat(teleformacionFinal),
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-        "Entrevista curso AÑO": excelFormat(form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista.trim() : "NO"),
+        "Entrevista curso AÑO": form.entrevista_curso_anio === "SÍ"
+          ? `${form.entrevista_fecha.split("-").reverse().join("/")} ${excelFormat(form.entrevista_curso)}`
+          : "NO",
         "TRABAJADO CON ORBEL ": form.trabajado_con_orbel === "SÍ" ? `SI ${form.anio_trabajado_orbel}` : "NO",
         "OBERV.": excelFormat(form.observaciones),
         "CURSOS": form.cursos.length > 0 ? "SI" : "NO",
@@ -458,7 +465,15 @@ export default function FormProfesorado() {
                   ))}
                 </div>
               ) : (
-                <input type="text" className="input" placeholder="Ej. Soldadura, Electricidad, PRL…" onChange={e => setForm(prev => ({ ...prev, cursos: e.target.value.split(",").map(c => c.trim()).filter(Boolean) }))} />
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="EJ. SOLDADURA, ELECTRICIDAD, PRL…" 
+                  onChange={e => setForm(prev => ({ 
+                    ...prev, 
+                    cursos: e.target.value.toUpperCase().split(",").map(c => c.trim()).filter(Boolean) 
+                  }))} 
+                />
               )}
               {errors.cursos && <span className="field-error">{errors.cursos}</span>}
             </div>
@@ -521,20 +536,34 @@ export default function FormProfesorado() {
               </div>
 
               {form.entrevista_curso_anio === "SÍ" && (
-                <div style={{ marginTop: 8 }}>
-                  <input
-                    type="text"
-                    name="detalles_entrevista"
-                    value={form.detalles_entrevista}
-                    onChange={handleChange}
-                    className={`input ${errors.detalles_entrevista ? "error" : ""}`}
-                    placeholder="ESPECIFIQUE AÑO Y CURSO O PUESTO (EJ. 2026 BJ / 2024 SOLDADURA)"
-                    autoFocus
-                  />
-                  {errors.detalles_entrevista && <span className="field-error">{errors.detalles_entrevista}</span>}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: 8 }}>
+                  <div>
+                    <label className="label">FECHA ENTREVISTA</label>
+                    <input
+                      type="date"
+                      name="entrevista_fecha"
+                      value={form.entrevista_fecha}
+                      onChange={handleChange}
+                      className={`input ${errors.entrevista_fecha ? "error" : ""}`}
+                    />
+                    {errors.entrevista_fecha && <span className="field-error">{errors.entrevista_fecha}</span>}
+                  </div>
+                  <div>
+                    <label className="label">CURSO</label>
+                    <select
+                      name="entrevista_curso"
+                      value={form.entrevista_curso}
+                      onChange={handleChange}
+                      className={`input ${errors.entrevista_curso ? "error" : ""}`}
+                    >
+                      <option value="">SELECCIONA…</option>
+                      {cursosDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    {errors.entrevista_curso && <span className="field-error">{errors.entrevista_curso}</span>}
+                  </div>
                 </div>
               )}
-              {errors.entrevista_curso_anio && !errors.detalles_entrevista && <span className="field-error">{errors.entrevista_curso_anio}</span>}
+              {errors.entrevista_curso_anio && !errors.entrevista_fecha && !errors.entrevista_curso && <span className="field-error">{errors.entrevista_curso_anio}</span>}
             </div>
 
             <div className="grid-field full-width">
@@ -599,7 +628,7 @@ export default function FormProfesorado() {
 
             <ReviewRow
               label="Entrevista realizada"
-              value={form.entrevista_curso_anio === "SÍ" ? form.detalles_entrevista : "NO"}
+              value={form.entrevista_curso_anio === "SÍ" ? `${form.entrevista_fecha.split("-").reverse().join("/")} — ${form.entrevista_curso}` : "NO"}
             />
 
             <ReviewRow
