@@ -23,7 +23,6 @@ export default function FormProfesorado() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [theme, setTheme] = useState("light");
-
   const [cursosDisponibles, setCursosDisponibles] = useState([]);
   const [localidades, setLocalidades] = useState([]);
   const [loadingOpts, setLoadingOpts] = useState(true);
@@ -34,34 +33,23 @@ export default function FormProfesorado() {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
       .then(data => {
-        const normalizedData = data.map(item => {
-          const normalized = {};
-          Object.keys(item).forEach(key => {
-            normalized[key.toLowerCase().trim()] = item[key];
-          });
-          return normalized;
-        });
+        if (data && data.length > 0) {
+          const cursosExtraidos = [...new Set(
+            data.flatMap(p => {
+              if (!p.cursos) return [];
+              return Array.isArray(p.cursos) ? p.cursos : String(p.cursos).split(",").map(c => c.trim());
+            })
+          )].filter(Boolean).sort();
+          setCursosDisponibles(cursosExtraidos);
 
-        const locsUnicas = [...new Set(
-          normalizedData.map(p => p.provincia || p.localidad)
-        )].filter(Boolean).sort();
-
-        let cursosUnicos = [];
-        if (normalizedData.length > 0) {
-          const exclude = ['nombre', 'sexo', 'localidad', 'provincia', 'titulación', 'titulacion', 'precio', 'año', 'oberv.', 'observaciones', 'trabajado_con_orbel'];
-          cursosUnicos = Object.keys(normalizedData[0])
-            .filter(key => !exclude.includes(key))
-            .map(c => c.replace(/_/g, ' ').toUpperCase());
+          const locsExtraidas = [...new Set(
+            data.map(p => p.localidad || p.PROVINCIA || p.provincia)
+          )].filter(Boolean).sort();
+          setLocalidades(locsExtraidas);
         }
-
-        setLocalidades(locsUnicas);
-        setCursosDisponibles(cursosUnicos);
-        setLoadingOpts(false);
       })
-      .catch(err => {
-        console.error("Error cargando opciones:", err);
-        setLoadingOpts(false);
-      });
+      .catch(err => console.error(err))
+      .finally(() => setLoadingOpts(false));
   }, []);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
@@ -78,7 +66,10 @@ export default function FormProfesorado() {
   };
 
   const handleCursoToggle = curso => {
-    setForm(prev => ({ ...prev, cursos: prev.cursos.includes(curso) ? prev.cursos.filter(c => c !== curso) : [...prev.cursos, curso] }));
+    setForm(prev => ({
+      ...prev,
+      cursos: prev.cursos.includes(curso) ? prev.cursos.filter(c => c !== curso) : [...prev.cursos, curso]
+    }));
     if (errors.cursos) setErrors(prev => ({ ...prev, cursos: undefined }));
   };
 
@@ -105,15 +96,16 @@ export default function FormProfesorado() {
         "PRECIO": form.precio.trim(),
         "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia,
         "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion,
-        "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-
         "TRABAJADO CON ORBEL ": form.trabajado_con_orbel === "Sí" ? form.detalles_orbel.trim() : "NO",
-
         "OBERV.": form.observaciones,
-        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
+        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : ""
       };
 
-      const res = await fetch(`${API_URL}?action=crear`, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+      const res = await fetch(`${API_URL}?action=crear`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
       if (!res.ok) throw new Error();
       setSubmitResult("success");
     } catch { setSubmitResult("error"); } finally { setSubmitting(false); }
@@ -125,26 +117,32 @@ export default function FormProfesorado() {
 
   if (submitResult === "success") return (
     <div className="app-container"><ThemeToggle theme={theme} setTheme={setTheme} /><Header />
-      <div className="success-card"><div className="success-icon">🎉</div><h2 className="title-font" style={{ fontSize: 26 }}>¡Perfil registrado!</h2><button className="btn-primary" onClick={handleReset}>➕ Añadir otro profesor</button></div>
-      <Footer theme={theme} /></div>
+      <div className="success-card">
+        <div className="success-icon">🎉</div>
+        <h2 className="title-font" style={{ fontSize: 26 }}>¡Perfil registrado!</h2>
+        <button className="btn-primary" onClick={handleReset}>➕ Añadir otro profesor</button>
+      </div>
+      <Footer theme={theme} />
+    </div>
   );
 
   if (submitResult === "error") return (
     <div className="app-container"><ThemeToggle theme={theme} setTheme={setTheme} /><Header />
-      <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 16, padding: "40px 32px", textAlign: "center" }}><h2 style={{ color: "var(--danger-text)" }}>Error al enviar</h2><button className="btn-primary" onClick={handleSubmit} disabled={submitting}>🔄 Reintentar</button></div>
-      <Footer theme={theme} /></div>
+      <div className="panel" style={{ textAlign: "center" }}>
+        <h2 style={{ color: "var(--danger-text)" }}>Error al enviar</h2>
+        <button className="btn-primary" onClick={handleSubmit} disabled={submitting}>🔄 Reintentar</button>
+      </div>
+      <Footer theme={theme} />
+    </div>
   );
 
   return (
     <div className="app-container">
-      <ThemeToggle theme={theme} setTheme={setTheme} />
-      <Header />
+      <ThemeToggle theme={theme} setTheme={setTheme} /><Header />
       <StepIndicator currentStep={currentStep} totalSteps={STEPS.length} stepLabels={STEPS} />
-
       {currentStep === 0 && <Step1Personal form={form} errors={errors} handleChange={handleChange} handleRadio={handleRadio} localidades={localidades} loadingOpts={loadingOpts} isOtraLocalidad={isOtraLocalidad} setIsOtraLocalidad={setIsOtraLocalidad} setForm={setForm} setErrors={setErrors} handleNext={handleNext} />}
       {currentStep === 1 && <Step2Profesional form={form} errors={errors} handleChange={handleChange} handleRadio={handleRadio} handleCursoToggle={handleCursoToggle} setForm={setForm} cursosDisponibles={cursosDisponibles} loadingOpts={loadingOpts} handleNext={handleNext} handleBack={handleBack} />}
       {currentStep === 2 && <Step3Review form={form} submitting={submitting} handleBack={handleBack} handleSubmit={handleSubmit} />}
-
       <Footer theme={theme} />
     </div>
   );
