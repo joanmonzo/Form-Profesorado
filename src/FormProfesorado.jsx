@@ -34,14 +34,28 @@ export default function FormProfesorado() {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
       .then(data => {
-        const cursosUnicos = [...new Set(
-          data.flatMap(p => p.cursos ? p.cursos.split(",").map(c => c.trim()) : [])
-        )].filter(Boolean).sort();
+        const normalizedData = data.map(item => {
+          const normalized = {};
+          Object.keys(item).forEach(key => {
+            normalized[key.toLowerCase().trim()] = item[key];
+          });
+          return normalized;
+        });
+
         const locsUnicas = [...new Set(
-          data.map(p => p.provincia || p.localidad)
+          normalizedData.map(p => p.provincia || p.localidad)
         )].filter(Boolean).sort();
-        setCursosDisponibles(cursosUnicos);
+
+        let cursosUnicos = [];
+        if (normalizedData.length > 0) {
+          const exclude = ['nombre', 'sexo', 'localidad', 'provincia', 'titulación', 'titulacion', 'precio', 'año', 'oberv.', 'observaciones', 'trabajado_con_orbel'];
+          cursosUnicos = Object.keys(normalizedData[0])
+            .filter(key => !exclude.includes(key))
+            .map(c => c.replace(/_/g, ' ').toUpperCase());
+        }
+
         setLocalidades(locsUnicas);
+        setCursosDisponibles(cursosUnicos);
         setLoadingOpts(false);
       })
       .catch(err => {
