@@ -1,5 +1,6 @@
 export const validateStep = (step, form) => {
     const errors = {};
+    if (!form) return errors;
 
     if (step === 0) {
         if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";

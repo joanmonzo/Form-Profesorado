@@ -34,11 +34,20 @@ export default function FormProfesorado() {
     fetch(`${API_URL}?action=todos`)
       .then(res => res.json())
       .then(data => {
-        setCursosDisponibles([...new Set(data.flatMap(p => p.cursos ? (Array.isArray(p.cursos) ? p.cursos : p.cursos.split(",").map(c => c.trim())) : []).filter(Boolean))].sort());
-        setLocalidades([...new Set(data.map(p => p.localidad || p.PROVINCIA).filter(Boolean))].sort());
+        const cursosUnicos = [...new Set(
+          data.flatMap(p => p.cursos ? p.cursos.split(",").map(c => c.trim()) : [])
+        )].filter(Boolean).sort();
+        const locsUnicas = [...new Set(
+          data.map(p => p.provincia || p.localidad)
+        )].filter(Boolean).sort();
+        setCursosDisponibles(cursosUnicos);
+        setLocalidades(locsUnicas);
+        setLoadingOpts(false);
       })
-      .catch(() => { })
-      .finally(() => setLoadingOpts(false));
+      .catch(err => {
+        console.error("Error cargando opciones:", err);
+        setLoadingOpts(false);
+      });
   }, []);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
