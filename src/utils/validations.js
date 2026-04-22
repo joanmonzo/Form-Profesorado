@@ -32,10 +32,8 @@ export const validateStep = (step, form) => {
         }
 
         if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
-
-        if (!form.entrevista_curso_anio) errors.entrevista_curso_anio = "Campo obligatorio.";
-        if (form.entrevista_curso_anio === "Sí" && !form.detalles_entrevista.trim()) {
-            errors.detalles_entrevista = "Especifica los detalles de la entrevista.";
+        if (form.trabajado_con_orbel === "Sí" && !form.detalles_orbel.trim()) {
+            errors.detalles_orbel = "Especifica el año/periodo y el curso impartido.";
         }
     }
 

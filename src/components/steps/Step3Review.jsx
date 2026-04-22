@@ -1,4 +1,3 @@
-// src/components/steps/Step3Review.jsx
 import React from 'react';
 import { ReviewRow } from '../ui';
 
@@ -21,8 +20,8 @@ export const Step3Review = ({ form, submitting, handleBack, handleSubmit }) => {
                 <ReviewRow label="Cursos" value={form.cursos.length > 0 ? form.cursos.join(", ") : null} />
                 <ReviewRow label="Cert. Docencia" value={form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia} />
                 <ReviewRow label="Cert. E-Learning" value={form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion} />
-                <ReviewRow label="Entrevista realizada" value={form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista : "NO"} />
-                <ReviewRow label="Trabajó en Orbel" value={form.trabajado_con_orbel} />
+                <ReviewRow label="Experiencia en Orbel" value={form.trabajado_con_orbel === "Sí" ? form.detalles_orbel : "NO"} />
+
                 <ReviewRow label="Observaciones" value={form.observaciones} />
             </div>
 

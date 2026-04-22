@@ -1,4 +1,3 @@
-// src/components/ui/index.jsx
 import React from 'react';
 
 export const StepIndicator = ({ currentStep, totalSteps, stepLabels }) => {

@@ -54,7 +54,9 @@
 /* =============================================
    RESET & BASE
    ============================================= */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -81,6 +83,11 @@ body {
   padding: 60px 24px 80px;
   max-width: 680px;
   margin: 0 auto;
+}
+
+input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: var(--calendar-icon-color);
 }
 
 /* =============================================
@@ -134,6 +141,13 @@ body {
 .input.error {
   border-color: var(--danger-text);
   box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
+}
+
+input[type="month"].input {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 44px;
+  font-family: 'Ubuntu', sans-serif;
 }
 
 .input:disabled {
@@ -295,6 +309,7 @@ textarea.input {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+
   .grid-field.full-width {
     grid-column: 1;
   }
@@ -378,6 +393,7 @@ textarea.input {
   .step-connector {
     width: 24px;
   }
+
   .step-label {
     font-size: 9px;
   }
@@ -475,13 +491,27 @@ textarea.input {
 }
 
 @keyframes popIn {
-  from { transform: scale(0.5); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* =============================================

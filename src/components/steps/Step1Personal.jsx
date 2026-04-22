@@ -1,4 +1,3 @@
-// src/components/steps/Step1Personal.jsx
 import React from 'react';
 import { RadioCard } from '../ui';
 

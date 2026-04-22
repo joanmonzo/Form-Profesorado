@@ -12,8 +12,7 @@ const INITIAL_FORM = {
   nombre: "", sexo: "", localidad: "", titulacion: "", cursos: [],
   precio: "", certificado_docencia: "", fecha_docencia: "",
   certificado_teleformacion: "", fecha_teleformacion: "",
-  trabajado_con_orbel: "", entrevista_curso_anio: "",
-  detalles_entrevista: "", observaciones: "",
+  trabajado_con_orbel: "", detalles_orbel: "", observaciones: "",
 };
 
 export default function FormProfesorado() {
@@ -84,8 +83,9 @@ export default function FormProfesorado() {
         "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia,
         "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion,
         "CERTIF. DOCENCIA PROFESIONALIDAD Y CERTIF. DE ESPECIALIDAD FORMATIVA (PO)": "NO",
-        "Entrevista curso AÑO": form.entrevista_curso_anio === "Sí" ? form.detalles_entrevista.trim() : "NO",
-        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel,
+
+        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel === "Sí" ? form.detalles_orbel.trim() : "NO",
+
         "OBERV.": form.observaciones,
         "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : "",
       };
