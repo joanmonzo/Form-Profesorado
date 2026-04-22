@@ -8,6 +8,15 @@ import { validateStep } from "./utils/validations";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbwy8jdOcI_tuU05leo_ld68tGSjPw7rE2QA7tcOe46NIbrhuj-XsFKmTT6sWy-NUlrx/exec";
 
+const BASE_CURSOS = [
+  "UNE", "PRL", "Gestión Mediomabiental", "Limpieza", "Mantenimiento",
+  "Electromecanica", "Electricidad", "Soldadura", "Logística", "Ingles",
+  "BJ", "SAG", "Carretilla", "Carretilla- Traspalet",
+  "Maquinaria Almacen 4M (carretilla-traspalet-retractil-apilador)",
+  "Movimiento tierras 4M(pala cargadora-retroexcavadora-mini excavadora-Mini Dumper)",
+  "Puente Grúa y Polipasto", "PEMP(Brazo-Tijera)", "Altura", "Espacios Confinados"
+];
+
 const INITIAL_FORM = {
   nombre: "", sexo: "", localidad: "", titulacion: "", cursos: [],
   precio: "", certificado_docencia: "", fecha_docencia: "",
@@ -34,21 +43,27 @@ export default function FormProfesorado() {
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
-          const cursosExtraidos = [...new Set(
-            data.flatMap(p => {
+          const cursosExtraidos = [...new Set([
+            ...BASE_CURSOS,
+            ...data.flatMap(p => {
               if (!p.cursos) return [];
               return Array.isArray(p.cursos) ? p.cursos : String(p.cursos).split(",").map(c => c.trim());
             })
-          )].filter(Boolean).sort();
+          ])].filter(Boolean).sort();
           setCursosDisponibles(cursosExtraidos);
 
           const locsExtraidas = [...new Set(
             data.map(p => p.localidad || p.PROVINCIA || p.provincia)
           )].filter(Boolean).sort();
           setLocalidades(locsExtraidas);
+        } else {
+          setCursosDisponibles([...BASE_CURSOS].sort());
         }
       })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        setCursosDisponibles([...BASE_CURSOS].sort());
+      })
       .finally(() => setLoadingOpts(false));
   }, []);
 
@@ -89,19 +104,23 @@ export default function FormProfesorado() {
       const payload = {
         action: "crear",
         "AÑO": new Date().getFullYear().toString(),
-        "NOMBRE": form.nombre,
-        "SEXO": form.sexo === "NS" ? "" : form.sexo,
-        "PROVINCIA": form.localidad,
-        "TITULACIÓN": form.titulacion,
-        "PRECIO": form.precio.trim(),
-        "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia === "En curso" ? `En curso (${form.fecha_docencia})` : form.certificado_docencia,
-        "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion === "En curso" ? `En curso (${form.fecha_teleformacion})` : form.certificado_teleformacion,
-        "TRABAJADO CON ORBEL ": form.trabajado_con_orbel === "Sí" ? form.detalles_orbel.trim() : "NO",
-        "OBERV.": form.observaciones,
-        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ") : ""
+        "NOMBRE": form.nombre.toUpperCase(),
+        "SEXO": form.sexo.toUpperCase(),
+        "PROVINCIA": form.localidad.toUpperCase(),
+        "TITULACIÓN": form.titulacion.toUpperCase(),
+        "PRECIO": form.precio.trim().toUpperCase(),
+        "CERTIF. DOCENCIA SSCE0110": form.certificado_docencia === "EN CURSO" ? `EN CURSO (${form.fecha_docencia})` : form.certificado_docencia,
+        "CERTIF. TELEFORMACION/ E-LEARNIING": form.certificado_teleformacion === "EN CURSO" ? `EN CURSO (${form.fecha_teleformacion})` : form.certificado_teleformacion,
+        "TRABAJADO CON ORBEL": form.trabajado_con_orbel === "SI" ? form.detalles_orbel.trim().toUpperCase() : "NO",
+        "OBERV.": form.observaciones.toUpperCase(),
+        "CURSOS": form.cursos.length > 0 ? form.cursos.join(", ").toUpperCase() : ""
       };
 
-      const res = await fetch(`${API_URL}?action=crear`, {
+      cursosDisponibles.forEach(curso => {
+        payload[curso] = form.cursos.includes(curso) ? "SI" : "NO";
+      });
+
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)

@@ -1,6 +1,5 @@
 export const validateStep = (step, form) => {
     const errors = {};
-    if (!form) return errors;
 
     if (step === 0) {
         if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
@@ -23,17 +22,17 @@ export const validateStep = (step, form) => {
         if (form.cursos.length === 0) errors.cursos = "Selecciona al menos un curso.";
 
         if (!form.certificado_docencia) errors.certificado_docencia = "Campo obligatorio.";
-        if (form.certificado_docencia === "En curso" && !form.fecha_docencia.trim()) {
+        if (form.certificado_docencia === "EN CURSO" && !form.fecha_docencia.trim()) {
             errors.fecha_docencia = "Indica cuándo prevés finalizarlo.";
         }
 
         if (!form.certificado_teleformacion) errors.certificado_teleformacion = "Campo obligatorio.";
-        if (form.certificado_teleformacion === "En curso" && !form.fecha_teleformacion.trim()) {
+        if (form.certificado_teleformacion === "EN CURSO" && !form.fecha_teleformacion.trim()) {
             errors.fecha_teleformacion = "Indica cuándo prevés finalizarlo.";
         }
 
         if (!form.trabajado_con_orbel) errors.trabajado_con_orbel = "Campo obligatorio.";
-        if (form.trabajado_con_orbel === "Sí" && !form.detalles_orbel.trim()) {
+        if (form.trabajado_con_orbel === "SI" && !form.detalles_orbel.trim()) {
             errors.detalles_orbel = "Especifica el año/periodo y el curso impartido.";
         }
     }
